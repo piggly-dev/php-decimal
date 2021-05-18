@@ -3,6 +3,18 @@ namespace Piggly\Decimal;
 
 class Decimal
 {
+	const _IS_BINARY = '/^0b([01]+(\.[01]*)?|\.[01]+)(p[+-]?\d+)?$/i';
+	const _IS_HEX = '/^0x([0-9a-f]+(\.[0-9a-f]*)?|\.[0-9a-f]+)(p[+-]?\d+)?$/i';
+	const _IS_OCTAL = '/^0o([0-7]+(\.[0-7]*)?|\.[0-7]+)(p[+-]?\d+)?$/i';
+	const _IS_DECIMAL = '/^(\d+(\.\d*)?|\.\d+)(e[+-]?\d+)?$/i';
+
+	const BASE = 1e7;
+	const LOG_BASE = 7;
+	const MAX_SAFE_INTEGER = 9007199254740991;
+
+	const LN10_PRECISION = strlen(DecimalConfig::LN10) - 1;
+	const PI_PRECISION = strlen(DecimalConfig::PI) - 1;
+
 	/**
 	 * An array of integers,
 	 * each between 0 - 1e7
@@ -18,6 +30,7 @@ class Decimal
 	 * to 9e15 or NaN.
 	 *
 	 * @var integer
+	 * @since 1.0.0
 	 */
 	protected $_exponent;
 
@@ -26,16 +39,30 @@ class Decimal
 	 * 1 or NaN.
 	 *
 	 * @var integer
+	 * @since 1.0.0
 	 */
 	protected $_sign;
+
+	/**
+	 * Decimal configuration.
+	 *
+	 * @var DecimalConfig
+	 * @since 1.0.0
+	 */
+	private $_config;
 
 	/**
 	 * Decimal constructor.
 	 *
 	 * @param Decimal|float|int|string $number
+	 * @param DecimalConfig|null $config
+	 * @since 1.0.0
+	 * @return void
 	 */
-	public function __construct ( $number )
-	{}
+	public function __construct ( $number, DecimalConfig $config = null )
+	{
+		$this->_config = !is_null($config) ? $config : new DecimalConfig();
+	}
 
 	/**
 	 * Returns a new Decimal whose value is the absolute value.
@@ -54,7 +81,7 @@ class Decimal
 		if ( $decimal->_sign < 0 )
 		{ $decimal->_sign = 1; }
 
-		return $this->finalize($decimal);
+		return $this->finalise($decimal);
 	}
 
 	/**
@@ -76,7 +103,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public function ceil () : Decimal
-	{ return $this->finalize(new Decimal($this), $this->_exponent + 1, DecimalConfig::ROUND_CEIL); }
+	{ return $this->finalise(new Decimal($this), $this->_exponent + 1, DecimalConfig::ROUND_CEIL); }
 
 	/**
 	 * Return
@@ -137,6 +164,7 @@ class Decimal
 	 * Alias to comparedTo() method.
 	 *
 	 * @see comparedTo()
+	 * @param Decimal|float|int|string $y
 	 * @since 1.0.0
 	 * @return float
 	 */
@@ -146,20 +174,146 @@ class Decimal
 	public function cbrt () : float
 	{}
 
+	/**
+	 * Undocumented function
+	 *
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
+	public function decimalPlaces () : Decimal
+	{
+		$digits = $this->_digits;
+		$number = \NAN;
+
+		if ( !empty($digits) )
+		{
+			$w = count($digits) - 1;
+			$number = ($w - floor($this->_exponent / self::LOG_BASE)) * self::LOG_BASE;
+			$w = $digits[$w];
+
+			if ( isset($digits[$w]) )
+			{
+				$w = $digits[$w];
+
+				for (; $w % 10 == 0; $w /= 1 )
+				{ $number--; }
+			}
+
+			if ( $number < 0 ) 
+			{ $number = 0; }
+		}
+
+		return $number;
+	}
+
+	/**
+	 * Alias to decimalPlaces() method.
+	 *
+	 * @see decimalPlaces()
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
 	public function dp () : Decimal
-	{}
+	{ return $this->decimalPlaces(); }
 
-	public function div ( $number ) : Decimal
-	{}
+	/**
+	 * Return a new Decimal whose value is the value of 
+	 * this Decimal divided by `y`, rounded to `precision` 
+	 * significant digits using rounding mode `rounding`.
+	 * 
+	 *  n / 0 = I
+    *  n / N = N
+    *  n / I = 0
+    *  0 / n = 0
+    *  0 / 0 = N
+    *  0 / N = N
+    *  0 / I = 0
+    *  N / n = N
+    *  N / 0 = N
+    *  N / N = N
+    *  N / I = N
+    *  I / n = I
+    *  I / 0 = I
+    *  I / N = N
+    *  I / I = N
+	 *
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
+	public function dividedBy ( $y ) : Decimal
+	{ return $this->divide($this, new Decimal($y)); }
 
-	public function divToInt ( $number ) : Decimal
-	{}
+	/**
+	 * Alias to dividedBy() method.
+	 *
+	 * @see dividedBy()
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
+	public function div ( $y ) : Decimal
+	{ return $this->dividedBy($y); }
 
-	public function eq ( $number ) : Decimal
-	{}
+	/**
+	 * Alias to dividedToIntegerBy() method.
+	 *
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
+	public function dividedToIntegerBy ( $y ) : Decimal
+	{ 
+		return $this->finalise(
+			$this->divide( $this, new Decimal($y, $this->_config), 0, 1, 1),
+			$this->_config->precision,
+			$this->_config->rounding
+		); 
+	}
 
+	/**
+	 * Alias to dividedToIntegerBy() method.
+	 *
+	 * @see dividedToIntegerBy()
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
+	public function divToInt ( $y ) : Decimal
+	{ return $this->dividedToIntegerBy($y); }
+
+	/**
+	 * Return true if the value of this Decimal is equal 
+	 * to the value of `y`, otherwise return false.
+	 *
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return bool
+	 */
+	public function equals ( $y ) : bool
+	{ return $this->cmp($y) === 0; }
+
+	/**
+	 * Alias to equals() method.
+	 *
+	 * @see equals()
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return bool
+	 */
+	public function eq ( $y ) : bool
+	{ return $this->equals($y); }
+
+	/**
+	 * Return a new Decimal whose value is the value of this 
+	 * Decimal rounded to a whole number in the direction 
+	 * of negative Infinity.
+	 *
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
 	public function floor () : Decimal
-	{}
+	{ return $this->finalise(new Decimal($this), $this->_exponent + 1, 3); }
 
 	public function gt ( $number ) : Decimal
 	{}
@@ -308,7 +462,7 @@ class Decimal
 	public function valueOf () : string
 	{}
 
-	protected function finalize ( 
+	protected function finalise ( 
 		$number, 
 		$significantDigits = null, 
 		$rouding = null, 
