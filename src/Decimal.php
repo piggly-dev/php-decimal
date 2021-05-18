@@ -521,20 +521,144 @@ class Decimal
 	public function log ( $number = null ) : Decimal
 	{}
 
-	public function sub ( $number ) : Decimal
+	/**
+	 * Return a new Decimal whose value is the value of this 
+	 * Decimal minus `y`, rounded to `precision` significant 
+	 * digits using rounding mode `rounding`.
+	 * 
+	 *  n - 0 = n
+	 *  n - N = N
+	 *  n - I = -I
+	 *  0 - n = -n
+	 *  0 - 0 = 0
+	 *  0 - N = N
+	 *  0 - I = -I
+	 *  N - n = N
+	 *  N - 0 = N
+	 *  N - N = N
+	 *  N - I = N
+	 *  I - n = I
+	 *  I - 0 = I
+	 *  I - N = N
+	 *  I - I = N
+	 * 
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
+	public function minus ( $y ) : Decimal
 	{}
 
-	public function mod ( $number ) : Decimal
+	/**
+	 * Alias to minus() method.
+	 *
+	 * @see minus()
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
+	public function sub ( $y ) : Decimal
+	{ return $this->minus($y); }
+
+	/**
+	 * Return a new Decimal whose value is the value of this 
+	 * Decimal modulo `y`, rounded to `precision` significant 
+	 * digits using rounding mode `rounding`.
+	 *
+	 * The result depends on the modulo mode.
+	 * 
+	 *   n % 0 =  N
+	 *   n % N =  N
+	 *   n % I =  n
+	 *   0 % n =  0
+	 *  -0 % n = -0
+	 *   0 % 0 =  N
+	 *   0 % N =  N
+	 *   0 % I =  0
+	 *   N % n =  N
+	 *   N % 0 =  N
+	 *   N % N =  N
+	 *   N % I =  N
+	 *   I % n =  N
+	 *   I % 0 =  N
+	 *   I % N =  N
+	 *   I % I =  N
+	 * 
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
+	public function modulo ( $y ) : Decimal
 	{}
 
+	/**
+	 * Alias to modulo() method.
+	 *
+	 * @see modulo()
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
+	public function mod ( $y ) : Decimal
+	{ return $this->modulo($y); }
+
+	/**
+	 * Return a new Decimal whose value is the natural 
+	 * exponential of the value of this Decimal, i.e. the 
+	 * base e raised to the power the value of this Decimal, 
+	 * rounded to `precision` significant digits using 
+	 * rounding mode `rounding`.
+	 *
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
+	public function naturalExponential () : Decimal
+	{ return Math::naturalExponential($this); }
+
+	/**
+	 * Alias to naturalExponential() method.
+	 *
+	 * @see naturalExponential()
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
 	public function exp () : Decimal
-	{}
+	{ return $this->naturalExponential(); }
 
+	/**
+	 * Alias to naturalLogarithm() method.
+	 *
+	 * @see naturalLogarithm()
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
+	public function naturalLogarithm () : Decimal
+	{ return Math::naturalLogarithm($this); }
+
+	/**
+	 * Alias to naturalLogarithm() method.
+	 *
+	 * @see naturalLogarithm()
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
 	public function ln () : Decimal
-	{}
+	{ return $this->naturalLogarithm(); }
 
+	/**
+	 * Return a new Decimal whose value is the value 
+	 * of this Decimal negated, i.e. as if multiplied by
+    * -1.
+	 *
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
 	public function neg () : Decimal
-	{}
+	{
+		$x = new Decimal($this, $this->_config);
+		$x->_sign = -$x->_sign;
+		return Math::finalise($x);
+	}
 
 	public function add ( $number ) : Decimal
 	{}
@@ -542,8 +666,16 @@ class Decimal
 	public function sd ( $number ) : Decimal
 	{}
 
+	/**
+	 * Return a new Decimal whose value is the value of this 
+	 * Decimal rounded to a whole number using rounding 
+	 * mode `rounding`.
+	 *
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
 	public function round () : Decimal
-	{}
+	{ return finalise(new Decimal($this, $this->_config), $this->_exponent + 1, $this->_config->rounding); }
 
 	public function sqrt () : Decimal
 	{}
@@ -598,6 +730,25 @@ class Decimal
 
 	public function valueOf () : string
 	{}
+
+	/**
+	 * Get Decimal sign.
+	 *
+	 * @param mixed $default
+	 * @since 1.0.0
+	 * @return array|null
+	 */
+	public function getSign ( $default = null )
+	{ return $this->_sign ?? $default; }
+
+	/**
+	 * Get Decimal digits.
+	 *
+	 * @since 1.0.0
+	 * @return array|null
+	 */
+	public function getDigits ()
+	{ return $this->_digits ?? null; }
 
 	protected function finalise ( 
 		$number, 
