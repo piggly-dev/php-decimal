@@ -438,23 +438,85 @@ class Decimal
 	public function atanh () : Decimal
 	{}
 
+	/**
+	 * Return true if the value of this Decimal 
+	 * is a finite number, otherwise return false.
+	 *
+	 * @since 1.0.0
+	 * @return boolean
+	 */
 	public function isFinity () : bool
-	{}
+	{ return !empty($this->_digits); }
 
+	/**
+	 * Return true if the value of this Decimal 
+	 * is an integer, otherwise return false.
+	 *
+	 * @since 1.0.0
+	 * @return boolean
+	 */
 	public function isInt () : bool
-	{}
+	{ return $this->isFinity() && \floor($this->_exponent/self::LOG_BASE) > count($this->_digits) - 2; }
 
+	/**
+	 * Return true if the value of this Decimal 
+	 * is NaN, otherwise return false.
+	 *
+	 * @since 1.0.0
+	 * @return boolean
+	 */
 	public function isNaN () : bool
-	{}
+	{ return $this->_sign === \NAN || is_null($this->_sign); }
 
+	/**
+	 * Return true if the value of this Decimal
+	 * is negative, otherwise return false.
+	 *
+	 * @since 1.0.0
+	 * @return bool
+	 */
+	public function isNegative () : bool
+	{ return $this->_sign < 0; }
+
+	/**
+	 * Alias to isNegative() method.
+	 *
+	 * @see isNegative()
+	 * @since 1.0.0
+	 * @return bool
+	 */
 	public function isNeg () : bool
-	{}
+	{ return $this->isNegative(); }
 
+	/**
+	 * Return true if the value of this Decimal
+	 * is positive, otherwise return false.
+	 *
+	 * @since 1.0.0
+	 * @return bool
+	 */
+	public function isPositive () : bool
+	{ return $this->_sign > 0; }
+
+	/**
+	 * Alias to isPositive() method.
+	 *
+	 * @see isPositive()
+	 * @since 1.0.0
+	 * @return bool
+	 */
 	public function isPos () : bool
-	{}
+	{ return $this->isPositive(); }
 
+	/**
+	 * Return true if the value of this Decimal 
+	 * is 0 or -0, otherwise return false.
+	 *
+	 * @since 1.0.0
+	 * @return bool
+	 */
 	public function isZero () : bool
-	{}
+	{ return $this->isFinity() && $this->_digits[0] === 0; }
 
 	public function log ( $number = null ) : Decimal
 	{}
