@@ -315,11 +315,92 @@ class Decimal
 	public function floor () : Decimal
 	{ return $this->finalise(new Decimal($this), $this->_exponent + 1, 3); }
 
-	public function gt ( $number ) : Decimal
-	{}
+	/**
+	 * Undocumented function
+	 *
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return bool
+	 */
+	public function greaterThan ( $y ) : bool
+	{ return $this->cmp($y) > 0; }
 
-	public function gte ( $number ) : Decimal
-	{}
+	/**
+	 * Alias to greaterThan() method.
+	 *
+	 * @see greaterThan()
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return bool
+	 */
+	public function gt ( $y ) : bool
+	{ return $this->greaterThan($y); }
+
+	/**
+	 * Undocumented function
+	 *
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return bool
+	 */
+	public function greaterThanOrEqualTo ( $y ) : bool
+	{
+		$k = $this->cmp($y);
+		return $k == 1 || $k === 0;
+	}
+
+	/**
+	 * Alias to greaterThanOrEqualTo() method.
+	 *
+	 * @see greaterThanOrEqualTo()
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return bool
+	 */
+	public function gte ( $y ) : bool
+	{ return $this->greaterThanOrEqualTo($y); }
+
+	/**
+	 * Undocumented function
+	 *
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return bool
+	 */
+	public function lessThan ( $y ) : bool
+	{ return $this->cmp($y) < 0; }
+
+	/**
+	 * Alias to lessThan() method.
+	 *
+	 * @see lessThan()
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return bool
+	 */
+	public function lt ( $y ) : bool
+	{ return $this->lessThan($y); }
+
+	/**
+	 * Undocumented function
+	 *
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return bool
+	 */
+	public function lessThanOrEqualTo ( $y ) : bool
+	{ return $this->cmp($y) < 1; }
+
+	/**
+	 * Alias to lessThanOrEqualTo() method.
+	 *
+	 * @see lessThanOrEqualTo()
+	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
+	 * @return bool
+	 */
+	public function lte ( $y ) : bool
+	{ return $this->lessThanOrEqualTo($y); }
 	
 	public function cos () : Decimal
 	{}
@@ -373,12 +454,6 @@ class Decimal
 	{}
 
 	public function isZero () : bool
-	{}
-
-	public function lt ( $number ) : Decimal
-	{}
-
-	public function lte ( $number ) : Decimal
 	{}
 
 	public function log ( $number = null ) : Decimal
