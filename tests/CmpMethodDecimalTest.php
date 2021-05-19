@@ -16,11 +16,11 @@ class CmpMethodDecimalTest extends TestCase
 
 	protected function setUp () : void
 	{
-		$this->_config = (new DecimalConfig())->set([
+		$this->_config = DecimalConfig::clone([
 			'precision' => 40,
 			'rounding' => 4,
 			'toExpNeg' => -7,
-			'toExpPos' => 20,
+			'toExpPos' => 21,
 			'maxE' => 9e15,
 			'minE' => -9e15,
 			'crypto' => false,

@@ -4,6 +4,45 @@ namespace Piggly\Decimal;
 class DecimalConfig
 {
 	/**
+	 * Global Decimal
+	 * configuration instance
+	 *
+	 * @var DecimalConfig
+	 * @since 1.0.0
+	 */
+	private static $_instance;
+
+	/** Prevent to construct it outside this class */
+	private function __construct () {}
+
+	/**
+	 * Get global Decimal configuration instance.
+	 *
+	 * @since 1.0.0
+	 * @return DecimalConfig
+	 */
+	public static function instance () : DecimalConfig
+	{
+		if ( !isset($_instance) )
+		{ static::$_instance = new DecimalConfig(); }
+
+		return static::$_instance;
+	}
+
+	/**
+	 * Clone current global Decimal configuration instance.
+	 *
+	 * @param array $props Overwrite new props.
+	 * @since 1.0.0
+	 * @return DecimalConfig
+	 */
+	public static function clone ( array $props = [] ) : DecimalConfig
+	{
+		$config = clone static::instance();
+		return $config->set($props);
+	}
+
+	/**
 	 * Rounds away from zero.
 	 * 
 	 * @var integer
@@ -164,7 +203,7 @@ class DecimalConfig
 	 * @var integer 0 to 9e15
 	 * @since 1.0.0
 	 */
-	public $toExpPos = 20;
+	public $toExpPos = 21;
 
 	/**
 	 * The negative exponent limit, i.e. 

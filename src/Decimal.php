@@ -65,14 +65,13 @@ class Decimal
 	 */
 	public function __construct ( $n, DecimalConfig $config = null )
 	{
-		$config = $config instanceof DecimalConfig ? clone $config : new DecimalConfig();
+		$config = $config instanceof DecimalConfig ? $config : DecimalConfig::instance();
 		$this->_config = $config;
 
 		if ( $n instanceof Decimal )
 		{
 			$this->_sign = $n->_sign;
 
-			
 			if ( DecimalHelper::isExternal() )
 			{
 				if ( !$n->hasDigits() || $n->_exponent > $config->maxE )
@@ -945,7 +944,8 @@ class Decimal
 		$x = $this;
 		$c = $this->_config;
 		$xd = $x->_d();
-		$yd = (new Decimal($y, $c))->_d();
+		$y  = new Decimal($y, $c);
+		$yd = $y->_d();
 
 		// Multiply signer
 		$y->s($y->_s()*$x->_s());
