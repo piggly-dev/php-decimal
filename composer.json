@@ -22,7 +22,7 @@
     "autoload": {
         "psr-4": {
             "Piggly\\Decimal\\": "src/"
-        }
+        } 
     },
     "require": {
         "php": "^7.3 || 8.0"

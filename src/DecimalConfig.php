@@ -201,6 +201,25 @@ class DecimalConfig
 	 * the modulus: a mod n.
 	 *
 	 * @var integer 0 to 9
+	 * @since 1.0.0
 	 */
 	public $modulo = self::ROUND_DOWN;
+
+	/**
+	 * Set all properties once.
+	 *
+	 * @param array $props
+	 * @since 1.0.0
+	 * @return DecimalConfig
+	 */
+	public function set ( array $props )
+	{
+		foreach ( $props as $prop => $value )
+		{
+			if ( \property_exists($this,$prop) )
+			{ $this->{$prop} = $value; }
+		}
+
+		return $this;
+	}
 }

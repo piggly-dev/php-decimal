@@ -4,7 +4,7 @@ namespace Piggly\Decimal;
 use RuntimeException;
 
 class Decimal
-{
+{ 
 	const _IS_BINARY = '/^0b([01]+(\.[01]*)?|\.[01]+)(p[+-]?\d+)?$/i';
 	const _IS_HEX = '/^0x([0-9a-f]+(\.[0-9a-f]*)?|\.[0-9a-f]+)(p[+-]?\d+)?$/i';
 	const _IS_OCTAL = '/^0o([0-7]+(\.[0-7]*)?|\.[0-7]+)(p[+-]?\d+)?$/i';
@@ -14,8 +14,10 @@ class Decimal
 	const LOG_BASE = 7;
 	const MAX_SAFE_INTEGER = 9007199254740991;
 
-	const LN10_PRECISION = strlen(DecimalConfig::LN10) - 1;
-	const PI_PRECISION = strlen(DecimalConfig::PI) - 1;
+	// const LN10_PRECISION = (strlen(DecimalConfig::LN10) - 1);
+	// const PI_PRECISION = (strlen(DecimalConfig::PI) - 1);
+	const LN10_PRECISION = 1025;
+	const PI_PRECISION = 1025;
 
 	/**
 	 * An array of integers,
@@ -116,7 +118,7 @@ class Decimal
 			{ $this->_sign = 1; }
 
 			// Small integers
-			if ( $n === \floor($n) && $n < 1e7 )
+			if ( $n == \floor($n) && $n < 1e7 )
 			{
 				for ($e = 0, $i = $n; $i >= 10; $i /= 10) 
 				{ $e++; }
@@ -125,11 +127,13 @@ class Decimal
 				{
 					if ( $e > $config->maxE )
 					{
+						// Infinity
 						$this->_exponent = \NAN;
 						$this->_digits = null;
 					}
 					else if ( $e < $config->minE )
 					{
+						// Zero
 						$this->_exponent = 0;
 						$this->_digits = [0];
 					}
@@ -147,8 +151,15 @@ class Decimal
 
 				return;
 			}
+			else if ( \is_infinite($n) )
+			{
+				$this->_exponent = \NAN;
+				$this->_digits = null;
+
+				return;
+			}
 			// Non numeric
-			else if ( $n * 0 !== 0 )
+			else if ( $n * 0 != 0 || \is_nan($n) )
 			{
 				$this->_sign = \NAN;
 				$this->_exponent = \NAN;
@@ -200,7 +211,7 @@ class Decimal
 	 */
 	public function absoluteValue () : Decimal
 	{ 
-		$decimal = new Decimal($this);
+		$decimal = new Decimal($this, $this->_config);
 		
 		if ( $decimal->_sign < 0 )
 		{ $decimal->_sign = 1; }
@@ -245,17 +256,31 @@ class Decimal
 		$xd = $x->_digits;
 		$xs = $x->_sign;
 
-		$y = new Decimal($y);
+		$y = new Decimal($y, $x->_config);
 		$yd = $y->_digits;
 		$ys = $y->_sign;
 
 		// Either NaN or ±Infinity?
-		if ( is_null($xd) || is_null($yd) )
-		{ return is_null($xs) || is_null($ys) ? \NAN : ($xs !== $ys ? 0 : ($xs === $ys ? 0 : (!$xd ^ $xs < 0 ? 1 : -1))); }
+		if ( \is_null($xd) || \is_null($yd) )
+		{ 
+			if ( \is_nan($xs) || \is_nan($ys) )
+			{ return \NAN; }
+
+			if ( $xs !== $ys )
+			{ return $xs; }
+
+			if ( $xd === $yd )
+			{ return 0; }
+
+			if ( !$xd ^ $xs < 0 )
+			{ return 1; }
+			
+			return -1; 
+		}
 
 		// Either zero?
-		if ( !isset($xd[0]) || !isset($yd[0]) )
-		{ return isset($xd[0]) ? $xs : (isset($yd[0]) ? -$ys : 0); }
+		if ( !$xd[0] || !$yd[0] )
+		{ return $xd[0] ? $xs : ($yd[0] ? -$ys : 0); }
 
 		// Signs differ?
 		if ($xs !== $ys) 
@@ -265,8 +290,8 @@ class Decimal
 		if ( $x->_exponent !== $y->_exponent )
 		{ return $x->_exponent > $y->_exponent ^ $xs < 0 ? 1 : -1; }
 
-		$xdC = count($xd);
-		$ydC = count($yd);
+		$xdC = \count($xd);
+		$ydC = \count($yd);
 
     	// Compare digit by digit
 		for (
@@ -891,14 +916,101 @@ class Decimal
 	{ return $this->squareRoot($y); }
 
 	/**
-	 * Not implemented
+	 * Return a new Decimal whose value is this Decimal 
+	 * times `y`, rounded to `precision` significant 
+	 * digits using rounding mode `rounding`.
+	 * 
+	 *  n * 0 = 0
+	 *  n * N = N
+	 *  n * I = I
+	 *  0 * n = 0
+	 *  0 * 0 = 0
+	 *  0 * N = N
+	 *  0 * I = N
+	 *  N * n = N
+	 *  N * 0 = N
+	 *  N * N = N
+	 *  N * I = N
+	 *  I * n = I
+	 *  I * 0 = N
+	 *  I * N = N
+	 *  I * I = I
 	 * 
 	 * @param Decimal|float|int|string $y
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
 	public function times ( $y )
-	{}
+	{
+		$x = $this;
+		$c = $this->_config;
+		$xd = $x->_d();
+		$yd = (new Decimal($y, $c))->_d();
+
+		// Multiply signer
+		$y->s($y->_s()*$x->_s());
+
+		// If either is NaN, ±Infinity or ±0...
+		if ( empty($xd) || empty($yd) )
+		{
+			return new Decimal(
+				!$y->signed() || (!empty($xd) && empty($yd)) || (!empty($yd) && empty($xd))
+				? \NAN
+				: (empty($xd) || empty($yd) ? 'Infinity' : 'Infinity' ), // TODO signal to infinity
+				$c 
+			);
+		}
+
+		$e = (int)\floor($x->_e()/static::LOG_BASE) + (int)\floor($y->_e()/static::LOG_BASE);
+		$xdl = \count($xd);
+		$ydl = \count($yd);
+
+		// Ensure xd points to the longer array
+		if ( $xdl < $ydl )
+		{
+			$r = $xd;
+			$xd = $yd;
+			$yd = $r;
+			$rl = $xdl;
+			$xdl = $ydl;
+			$ydl = $rl;
+		}
+
+		$r = [];
+		$rl = $xdl + $ydl;
+
+		for ( $i = $rl; $i--; )
+		{ $r[] = 0; }
+
+		// Multiply
+		for ( $i = $ydl; --$i >= 0; )
+		{
+			$carry = 0;
+
+			for ( $k = $xdl + $i; $k > $i; )
+			{
+				$t = $r[$k] + $yd[$i] * $xd[$k-$i-1] + $carry;
+				$r[$k--] = $t % static::BASE | 0;
+				$carry = $t / static::BASE | 0;
+			}
+
+			$r[$k] = ($r[$k] + $carry) % static::BASE | 0;
+		}
+
+		// Remove trailing zeros
+		for (; !$r[--$rl]; )
+		{ \array_pop($r); }
+
+		if ($carry) 
+		{ $e++; }
+		else
+		{ \array_shift($r); }
+		
+		$y->d($r);
+		$y->e(DecimalHelper::getBase10Exponent($r, $e));
+
+		return DecimalHelper::isExternal() ? DecimalHelper::finalise($y, $c->precision, $c->rounding) : $y;
+	}
 
 	/**
 	 * Alias to times() method.
@@ -1107,7 +1219,10 @@ class Decimal
 		$d = new Decimal($d1);
 		$e = DecimalHelper::getPrecision($xd) - $x->_e() - 1; $d->e($e);
 		$k = $e % static::LOG_BASE;
-		$d->_d()[0] = \pow(10, $k < 0 ? static::LOG_BASE + $k : $k);
+
+		$dd = $d->_d();
+		$dd[0] = \pow(10, $k < 0 ? static::LOG_BASE + $k : $k);
+		$d->d($dd);
 
 		if ( \is_null($maxD) )
 		{ $maxD = $e > 0 ? $d : $n1; }
@@ -1444,11 +1559,11 @@ class Decimal
 	/**
 	 * Get Decimal exponent.
 	 *
-	 * @param integer $exponent
+	 * @param integer|float $exponent
 	 * @since 1.0.0
 	 * @return self
 	 */
-	public function e ( int $exponent )
+	public function e ( $exponent )
 	{ $this->_exponent = $exponent; return $this; }
 
 	/**
@@ -1464,11 +1579,11 @@ class Decimal
 	/**
 	 * Set Decimal sign.
 	 *
-	 * @param array $sign
+	 * @param int|float $sign
 	 * @since 1.0.0
 	 * @return self
 	 */
-	public function s ( int $sign )
+	public function s ( $sign )
 	{ $this->_sign = $sign; return $this; }
 
 	/**
@@ -1508,6 +1623,16 @@ class Decimal
 	 */
 	public function _d () : ?array
 	{ return $this->_digits ?? null; }
+
+	/**
+	 * Push to digits.
+	 *
+	 * @param integer $i
+	 * @since 1.0.0
+	 * @return self
+	 */
+	public function dpush ( $i )
+	{ $this->_digits[] = $i; return $this; }
 
 	/**
 	 * If Decimal has digits.

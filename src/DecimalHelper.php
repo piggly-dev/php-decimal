@@ -6,7 +6,7 @@ use RuntimeException;
 class DecimalHelper
 {
 	/**
-	 * Extenal action.
+	 * External action.
 	 *
 	 * @var boolean TRUE by default.
 	 * @since 1.0.0
@@ -135,7 +135,7 @@ class DecimalHelper
 		int $max
 	)
 	{
-		if ( $i !== \floor($i) || $i < $min || $i > $max )
+		if ( $i !== (int)\floor($i) || $i < $min || $i > $max )
 		{ throw new RuntimeException(\sprintf('`%s` is not a valid int32.', (string)$i)); }
 	}
 
@@ -462,9 +462,9 @@ class DecimalHelper
 		if ( $isExp )
 		{
 			if ( $sd && (($k = $sd - $len) > 0) )
-			{ $str = $str[0].'.'.\substr($str,1).static::getZeroString($k); }
+			{ $str = $str[0].'.'.static::slice($str,1).static::getZeroString($k); }
 			else if ( $len > 1 )
-			{ $str = $str[0].'.'.\substr($str,1); }
+			{ $str = $str[0].'.'.static::slice($str,1); }
 
 			$str = $str . ($x->_e() < 0 ? 'e' : 'e+') . \strval($x->_e());
 		}
@@ -484,7 +484,7 @@ class DecimalHelper
 		else
 		{
 			if ( ($k = $e + 1) < $len ) 
-			{ $str = \substr($str, 0, $k) + '.' + \substr($str, $k); }
+			{ $str = static::slice($str, 0, $k).'.'.static::slice($str, $k); }
 
 			if ( $sd && (($k = $sd - $len) > 0) ) 
 			{
@@ -615,7 +615,7 @@ class DecimalHelper
 		$zs = '';
 
 		for (; $k--;) 
-		{ $zs += '0'; }
+		{ $zs .= '0'; }
 
 		return $zs;
 	}
@@ -659,15 +659,17 @@ class DecimalHelper
 			if ( \count($r->_d()) === $k )
 			{ $isTruncated = true; }
 
-			$number = \floor($number/2);
+			$number = (int)\floor($number/2);
 
 			if ( $number === 0 )
 			{
 				$number = \count($r->_d()) - 1;
+				$rd = $r->_d();
 				
-				if ( $isTruncated && $r->_d()[$number] === 0 )
-				{ $r->_d()[$number] = $r->_d()[$number]++; }
+				if ( $isTruncated && $rd[$number] === 0 )
+				{ $rd[$number] = $rd[$number]++; }
 
+				$r->d($rd);
 				break;
 			}
 
@@ -837,13 +839,14 @@ class DecimalHelper
 	) : Decimal
 	{
 		// Position to decimal point
-		$e = strpos($str, '.');
-		// Position to exponencial symbol
-		$i = strpos($str, 'e');
+		$e = \strpos($str, '.');
 
 		// Decimal point?
 		if ( $e !== false )
-		{ $str = str_replace('.', '', $str); }
+		{ $str = \str_replace('.', '', $str); }
+		
+		// Position to exponencial symbol
+		$i = \stripos($str, 'e');
 
 		// Exponential form?
 		if ( $i )
@@ -853,21 +856,21 @@ class DecimalHelper
 			{ $e = $i; }
 
 			// 1e{xxx}
-			$e += +\intval(\substr($str, $i+1));
+			$e += +\intval(static::slice($str, $i+1));
 			// {xxx}e1
-			$str = \substr($str, 0, $i);
+			$str = static::slice($str, 0, $i);
 		}
 		else if ( $e === false )
 		{ $e = \strlen($str); }
 
 		// Determine leading zeros.
-		for ( $i = 0; \ord($str[$i]) === 48; $i++ );
+		for ( $i = 0; isset($str[$i]) && \ord($str[$i]) === 48; $i++ );
 
 		// Determine trailing zeros.
-		for ( $len = \strlen($str); \ord($str[$len-1]) === 48; $len-- );
+		for ( $len = \strlen($str); $len > 0 && \ord($str[$len-1]) === 48; --$len );
 
 		// Remove zeros
-		$str = \substr($str, $i, $len);
+		$str = static::slice($str, $i, $len);
 
 		if ( !empty($str) )
 		{
@@ -891,12 +894,12 @@ class DecimalHelper
 			if ( $i < $len )
 			{
 				if ( $i )
-				{ $x->_d()[] = +\intval(\substr($str, 0, $i)); }
+				{ $x->dpush(+\intval(static::slice($str, 0, $i))); }
 
 				for ( $len -= Decimal::LOG_BASE; $i < $len; )
-				{ $x->_d()[] = +\intval(\substr($str, $i, $i+Decimal::LOG_BASE)); }
+				{ $x->dpush(+\intval(static::slice($str, $i, $i+=Decimal::LOG_BASE))); }
 
-				$str = \substr($str, $i);
+				$str = static::slice($str, $i);
 				$i = Decimal::LOG_BASE - \strlen($str);
 			}
 			else
@@ -905,28 +908,28 @@ class DecimalHelper
 			for (; $i--;)
 			{ $str .= '0'; }
 
-			$x->_d()[] = +\intval($str);
+			$x->dpush(+\intval($str));
 
-			if ( self::$_external )
+			if ( static::isExternal() )
 			{
 				if ( $x->_e() > $x->_c()->maxE )
 				{
-					$x->_d(null);
-					$x->_e(\NAN);
+					$x->d(null);
+					$x->e(\NAN);
 				}
 				else if ( $x->_e() < $x->_c()->minE )
 				{
 					// Zero
-					$x->_d([0]);
-					$x->_e(0);
+					$x->d([0]);
+					$x->e(0);
 				}
 			}
-			else
-			{
-				// Zero
-				$x->_d([0]);
-				$x->_e(0);
-			}
+		}
+		else
+		{
+			// Zero
+			$x->d([0]);
+			$x->e(0);
 		}
 
 		return $x;
@@ -947,30 +950,13 @@ class DecimalHelper
 		string $str
 	) : Decimal
 	{
-		if ( $str === 'NaN' )
+		if ( $str === 'NAN' || $str === 'INF' )
 		{ 
-			$x->_d(null);
-			$x->_e(\NAN);
-			$x->_s(\NAN);
-			return $x;
-		}
+			if ( $str === 'NAN' )
+			{ $x->s(\NAN); }
 
-		if ( !strpos($str, 'Infinity') !== false )
-		{ 
-			// Minus sign
-			if ( \ord($str[0]) === 45 )
-			{
-				$x->_d([]);
-				$x->_e(0);
-				$x->_s(-1);
-
-				return $x;
-			}
-
-			$x->_d([]);
-			$x->_e(0);
-			$x->_s(1);
-
+			$x->d(null);
+			$x->e(\NAN);
 			return $x;
 		}
 
@@ -988,14 +974,15 @@ class DecimalHelper
 	
 		// Is there a binary exponent part?
 		$i = \strpos($str, 'p');
+		$p = null;
 
 		if ( $i !== false )
 		{
-			$p = +\intval(\substr($str, $i+1));
-			$str = \substr($str, 2, $i);
+			$p = +\intval(static::slice($str, $i+1));
+			$str = static::slice($str, 2, $i);
 		}
 		else
-		{ $str = \substr($str, 2); }
+		{ $str = static::slice($str, 2); }
 	
 		// Convert $str as an integer then divide the result 
 		// by $base raised to a power such that the
@@ -1016,7 +1003,7 @@ class DecimalHelper
 		$xe = \count($xd) - 1;
 
 		// Remove trailing zeros
-		for ( $i = $xe; $xd[$i] === 0; --$i )
+		for ( $i = $xe; $i >= 0 && $xd[$i] === 0; --$i )
 		{ \array_pop($xd); }
 
 		if ( $i < 0 )
@@ -1051,13 +1038,15 @@ class DecimalHelper
 		}
 
 		if ( $p )
-		{ $y = $x->times( \abs($p) < 54 ? \pow(2, $p) : (new Decimal(2))->pow(2) ); }
+		{ 
+			$y = $x->times( \abs($p) < 54 ? \pow(2, $p) : (new Decimal(2))->pow(2) ); 
+
+			$x->e($y->_e());
+			$x->s($y->_s());
+			$x->d($y->_d());
+		}
 		
 		static::external(true);
-
-		$x->e($y->_e());
-		$x->s($y->_s());
-		$x->d($y->_d());
 		return $x;
 	}
 
@@ -1176,5 +1165,36 @@ class DecimalHelper
 		{ return array_slice($arr, 0, $length); }
 
 		return $arr;
+	}
+
+	/**
+	 * Slice string from $startIndex at $endIndex.
+	 *
+	 * @param string $str
+	 * @param integer $startIndex
+	 * @param integer|null $endIndex
+	 * @return string
+	 */
+	public static function slice ( 
+		string $str, 
+		int $startIndex, 
+		int $endIndex = null 
+	) : string
+	{
+		$len = \strlen($str);
+		$startIndex = $startIndex < 0 ? 0 : ($startIndex > $len ? $len : $startIndex);
+		$endIndex = is_null($endIndex) ? null : ($endIndex < 0 ? 0 : ($endIndex > $len ? $len : $endIndex));
+
+		if ( $endIndex === $startIndex )
+		{ return ''; }
+
+		if ( \is_null($endIndex) )
+		{ return \substr($str, $startIndex); }
+
+		if ( $startIndex === 0 && $endIndex === $len )
+		{ return $str; }
+
+		$endIndex = $endIndex - $startIndex;
+		return \substr($str, $startIndex, $endIndex);
 	}
 }
