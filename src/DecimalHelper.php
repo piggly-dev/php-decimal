@@ -1,6 +1,7 @@
 <?php
 namespace Piggly\Decimal;
 
+use Exception;
 use RuntimeException;
 
 class DecimalHelper
@@ -255,17 +256,20 @@ class DecimalHelper
 		$yd = $y->_d();
 
 		// If either is NaN, ±Infinity or ±0...
-		if ( empty($xd) || empty($yd) )
+		if ( empty($xd) || empty($yd) || !$xd[0] || !$yd[0] )
 		{
 			// NaN or ±0
 			if ( !$x->signed() || !$y->signed() || ($xd ? $yd && $xd[0] == $yd[0] : !$yd) )
 			{ return new Decimal(\NAN, $c); }
 
 			// ±Infinity
-			if ( $xd && $xd[0] == 0 )
-			{ return new Decimal(0, $c); }
+			if ( $xd && $xd[0] == 0 || empty($yd) )
+			{ 
+				$num = $sign > 0 ? '0' : '-0';
+				return new Decimal($num, $c); 
+			}
 
-			return new Decimal(\INF, $c);
+			return new Decimal($sign > 0 ? \INF : -\INF, $c);
 		}
 
 		if ( $base )
@@ -288,12 +292,12 @@ class DecimalHelper
 		// Result exponent may be one less than e.
       // The digit array of a Decimal from 
 		// toStringBinary may have trailing zeros.
-      for ( $i = 0; $yd[$i] === ($xd[$i] ?? 0); $i++ );
+		for ( $i = 0; isset($yd[$i]) && $yd[$i] == ($xd[$i] ?? 0); $i++ );
 
-      if ($yd[$i] > ($xd[$i] ?? 0)) 
+      if (isset($yd[$i]) && $yd[$i] > ($xd[$i] ?? 0)) 
 		{ $e--; }
 
-      if ( $pr == null ) 
+      if ( \is_null($pr) ) 
 		{
 			$sd = $pr = $c->precision;
 			$rm = $c->rounding;
@@ -537,7 +541,7 @@ class DecimalHelper
 				$xd = $x->_d();
 
 				// Infinity/NaN
-				if ( is_null($xd) )
+				if ( is_null($xd) || empty($xd) )
 				{ return $x; }
 
 				// rd: the rounding digit, i.e. the digit after the digit that may be rounded up.
@@ -608,6 +612,7 @@ class DecimalHelper
 				}
 
 				// Are there any non-zero digits after the rounding digit?
+				// EXPRESSION ERROR
 				$isTruncated = $isTruncated || $sd < 0 || isset($xd[$xdi+1]) || ($j < 0 ? $w : $w % \pow(10, $digits - $j - 1 ));
 
 				$roundUp = $rm < 4
@@ -628,6 +633,7 @@ class DecimalHelper
 
           			// 1, 0.1, 0.01, 0.001, 0.0001 etc.
 						$xd[0] = \pow(10, (Decimal::LOG_BASE - $sd % Decimal::LOG_BASE) % Decimal::LOG_BASE);
+						$x->e(-$sd??0);
 					}
 					else
 					{
@@ -636,6 +642,7 @@ class DecimalHelper
 						$x->e(0);
 					}
 
+					$x->d($xd);
 					return $x;
 				}
 
@@ -698,6 +705,8 @@ class DecimalHelper
 				// Remove trailing zeros.
 				for ($i = \count($xd); $xd[--$i] === 0;) 
 				{ \array_pop($xd); }
+
+				$x->d($xd);
 			}
 
 			// Need breaks the while loop
@@ -1095,7 +1104,7 @@ class DecimalHelper
 	public static function nonFiniteToString (
 		$x
 	) : string
-	{ return is_nan($x->_s()) ? 'NaN' : 'Infinity'; }
+	{ return is_nan($x->_s()) ? 'NAN' : 'INF'; }
 
 	/**
 	 * Parse the value of a new Decimal $x 

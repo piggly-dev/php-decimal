@@ -44,7 +44,7 @@ class CmpMethodDecimalTest extends TestCase
 		$expected 
 	)
 	{ 
-		if ( \is_nan($expected) )
+		if ( \is_NAN($expected) )
 		{ $this->assertEquals(\strval($expected), \strval((new Decimal($a, $this->_config))->cmp($b))); }
 		else
 		{ $this->assertEquals($expected, (new Decimal($a, $this->_config))->cmp($b)); }

@@ -237,7 +237,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public function ceil () : Decimal
-	{ return DecimalHelper::finalise(new Decimal($this), $this->_exponent + 1, DecimalConfig::ROUND_CEIL); }
+	{ return DecimalHelper::finalise(new Decimal($this, $this->_config), $this->_exponent + 1, DecimalConfig::ROUND_CEIL); }
 
 	/**
 	 * Return
@@ -391,7 +391,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public function dividedBy ( $y ) : Decimal
-	{ return DecimalHelper::divide($this, new Decimal($y)); }
+	{ return DecimalHelper::divide($this, new Decimal($y, $this->_config)); }
 
 	/**
 	 * Alias to dividedBy() method.
@@ -462,7 +462,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public function floor () : Decimal
-	{ return DecimalHelper::finalise(new Decimal($this), $this->_exponent + 1, 3); }
+	{ return DecimalHelper::finalise(new Decimal($this, $this->_config), $this->_exponent + 1, 3); }
 
 	/**
 	 * Undocumented function
@@ -710,7 +710,91 @@ class Decimal
 	 */
 	// Not implemented
 	public function minus ( $y )
-	{}
+	{
+		$x = $this;
+		$c = $this->_config;
+		$y = new Decimal($y, $c);
+
+		// If either is not finite...
+		if ( !$x->isFinity() || !$y->isFinity() )
+		{
+			// NaN is NaN
+			if ( !$x->signed() || !$y->signed() )
+			{ return new Decimal(\NAN, $c); }
+			// Return y negated if x is finite and y is ±Infinity.
+			else if ( $x->isFinity() )
+			{ $y->s(-$y->_s()); }
+			// Return x if y is finite and x is ±Infinity.
+			// Return x if both are ±Infinity with different signs.
+			// Return NaN if both are ±Infinity with the same sign.
+			else
+			{ $y = new Decimal( $y->isFinity() || $x->_s() !== $y->_s() ? $x : \NAN); }
+
+			return $y;
+		}
+
+		// If signs differ...
+		if ( $x->_s() != $y->_s() ) 
+		{
+			$y->s(-$y->_s());
+			return $x->plus($y);
+		}
+
+		$xd = $x->_d();
+		$yd = $x->_d();
+		$pr = $c->precision;
+		$rm = $c->rounding;
+
+		// If either is zero...
+		if ( empty($xd[0]) || empty($yd[0]) )
+		{
+			// Return y negated if x is zero and y is non-zero.
+			if ( !empty($yd[0]) )
+			{ $y->s(!$y->_s()); }
+			// Return x if y is zero and x is non-zero.
+			else if ( !empty($xd[0]) )
+			{ $y = new Decimal($x, $c); }
+			// Return zero if both are zero.
+			// From IEEE 754 (2008) 6.3: 0 - 0 = -0 - -0 = -0 when rounding to -Infinity.
+			else
+			{ return new Decimal($rm === 3 ? -0 : 0); }
+
+			return DecimalHelper::isExternal() ? DecimalHelper::finalise($y, $pr, $rm) : $y;
+		}
+
+		// x and y are finite, non-zero numbers with the same sign.
+	
+		// Calculate base 1e7 exponents.
+		$e = (int)\floor($y->_e()/static::LOG_BASE);
+		$xe = (int)\floor($x->_e()/static::LOG_BASE);
+		$k = $xe - $e;
+
+		// If base 1e7 exponents differ...
+		if ( $k )
+		{
+			$xlty = $k < 0;
+
+			if ( $xlty )
+			{
+				$d = $xd;
+				$k = -$k;
+				$len = \count($yd);
+			}
+			else
+			{
+				$d = $yd;
+				$e = $xe;
+				$len = \count($yd);
+			}
+			
+			// Numbers with massively different exponents 
+			// would result in a very high number of zeros 
+			// needing to be prepended, but this can be avoided 
+			// while still ensuring correct rounding by limiting 
+			// the number of zeros to `Math.ceil(pr / LOG_BASE) + 2`.
+			$i = max
+		}
+	}
 
 	/**
 	 * Alias to minus() method.
@@ -1211,12 +1295,12 @@ class Decimal
 		if ( empty($xd) )
 		{ return new Decimal($x, $c); }
 
-		$n1 = new Decimal(1);
-		$d1 = new Decimal(0);
-		$d0 = new Decimal(1);
-		$n0 = new Decimal(0);
+		$n1 = new Decimal(1, $c);
+		$d1 = new Decimal(0, $c);
+		$d0 = new Decimal(1, $c);
+		$n0 = new Decimal(0, $c);
 
-		$d = new Decimal($d1);
+		$d = new Decimal($d1, $c);
 		$e = DecimalHelper::getPrecision($xd) - $x->_e() - 1; $d->e($e);
 		$k = $e % static::LOG_BASE;
 
@@ -1238,7 +1322,7 @@ class Decimal
 
 		DecimalHelper::external(false);
 
-		$n = new Decimal(DecimalHelper::digitsToString($xd));
+		$n = new Decimal(DecimalHelper::digitsToString($xd), $c);
 		$pr = $c->precision;
 
 		for (;;) 
@@ -1603,7 +1687,7 @@ class Decimal
 	 * @return bool
 	 */
 	public function signed () : bool
-	{ return $this->_sign !== \NAN; }
+	{ return !\is_nan($this->_sign); }
 
 	/**
 	 * Set Decimal digits.

@@ -23,7 +23,7 @@ class DecimalConfig
 	 */
 	public static function instance () : DecimalConfig
 	{
-		if ( !isset($_instance) )
+		if ( !(static::$_instance instanceof DecimalConfig) )
 		{ static::$_instance = new DecimalConfig(); }
 
 		return static::$_instance;
