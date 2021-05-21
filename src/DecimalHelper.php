@@ -7,12 +7,22 @@ use RuntimeException;
 class DecimalHelper
 {
 	/**
-	 * External action.
+	 * Prevent rounding of 
+	 * intermediate calculations
 	 *
 	 * @var boolean TRUE by default.
 	 * @since 1.0.0
 	 */
 	private static $_external = true;
+
+	/**
+	 * Prevent rounding of 
+	 * intermediate calculations
+	 *
+	 * @var int TRUE by default.
+	 * @since 1.0.0
+	 */
+	private static $_quadrant = null;
 
 	/**
 	 * Inexact operation.
@@ -101,6 +111,25 @@ class DecimalHelper
 	{ return static::$_inexact; }
 
 	/**
+	 * Mark quadrant operation.
+	 *
+	 * @param int $quadrant
+	 * @since 1.0.0
+	 * @return void
+	 */
+	public static function quadrant ( bool $quadrant )
+	{ static::$_quadrant = $quadrant; }
+
+	/**
+	 * Get quadrant operation.
+	 *
+	 * @since 1.0.0
+	 * @return int
+	 */
+	public static function _quadrant () : bool
+	{ return static::$_quadrant; }
+
+	/**
 	 * Convert an array of digits to a string.
 	 *
 	 * @param array $d
@@ -168,16 +197,90 @@ class DecimalHelper
 	}
 
 	/**
-	 * Not implemented.
-	 * 
 	 * Check 5 rounding digits if `repeating` is null, 4 otherwise.
 	 * `repeating == null` if caller is `log` or `pow`,
 	 * `repeating != null` if caller is `naturalLogarithm` or `naturalExponential`.
 	 *
+	 * @param array $d Digits.
+	 * @param integer $i Length.
+	 * @param integer $rm Rounding mode.
+	 * @param bool $repeating
 	 * @return bool
 	 */
-	public static function checkRoundingDigits ()
-	{}
+	public static function checkRoundingDigits (
+		$d,
+		$i,
+		$rm,
+		$repeating = null
+	) : bool
+	{
+		//  Get the length of the first word of the array d.
+		for ( $k = $d[0]; $k >= 10; $k /= 10 )
+		{ --$i; }
+
+		// Is the rounding digit in the first word of d?
+		if ( --$i < 0 )
+		{
+			$i += Decimal::BASE;
+			$di = 0;
+		}
+		else
+		{
+			$di = (int)\ceil(($i+1)/Decimal::LOG_BASE);
+			$i %= Decimal::LOG_BASE;
+		}
+
+		// i is the index (0 - 6) of the rounding digit.
+		// E.g. if within the word 3487563 the first rounding digit is 5,
+		// then i = 4, k = 1000, rd = 3487563 % 1000 = 563
+		$k = (int)\pow(10, Decimal::LOG_BASE - 1);
+		$rd = $d[$di] % $k | 0;
+
+		if ( \is_null($repeating) )
+		{
+			if ( $i < 3 )
+			{
+				if ( $i == 0 )
+				{ $rd = ($rd/100) | 0; }
+				else if ( $i == 1 )
+				{ $rd = ($rd/10) | 0; }
+
+				$r = ($rm < 4 && $rd == 99999)
+						|| ($rm > 3 && $rd == 49999)
+						|| $rd == 50000
+						|| $rd = 0;
+			}
+			else 
+			{
+				$r = ((($rm < 4 && $rd + 1 == $k) || ($rm > 3 && $rd + 1 == $k / 2)) 
+						&& (($d[$di + 1] / $k / 100) | 0) == (int)\pow(10, $i - 2) - 1) 
+						|| (($rd == $k / 2 || $rd == 0) && (($d[$di + 1] / $k / 100) | 0) == 0);
+			}
+		}
+		else
+		{
+			if ( $i < 4 )
+			{
+				if ( $i == 0 )
+				{ $rd = ($rd/1000) | 0; }
+				else if ( $i == 1 )
+				{ $rd = ($rd/100) | 0; }
+				else if ( $i == 2 )
+				{ $rd = ($rd/10) | 0; }
+
+				$r = (($repeating || $rm < 4) && $rd == 9999) 
+						|| (!$repeating && $rm > 3 && $rd == 4999);
+			}
+			else 
+			{
+				$r = ((($repeating || $rm < 4) && $rd + 1 == $k) 
+						|| (!$repeating && $rm > 3 && $rd + 1 == $k / 2)) 
+						&& (($d[$di + 1] / $k / 1000) | 0) == (int)\pow(10, $i - 3) - 1;
+			}
+		}
+		
+		return $r;
+	}
 
 	/**
 	 * Convert string of $baseIn to an array of 
@@ -225,9 +328,50 @@ class DecimalHelper
 		return array_reverse($arr);
 	}
 
-	// Not implemented
-	public static function cosine ()
-	{}
+	/**
+	 * cos(x) = 1 - x^2/2! + x^4/4! - ...
+	 * |x| < pi/2
+	 *
+	 * @param DecimalConfig $c,
+	 * @param Decimal $x
+	 * @since 1.0.0
+	 * @return Decimal
+	 */
+	public static function cosine (
+		DecimalConfig $c,
+		Decimal $x
+	) : Decimal
+	{
+		$len = \count($x->_d());
+
+		// Argument reduction: cos(4x) = 8*(cos^4(x) - cos^2(x)) + 1
+		// i.e. cos(x) = 8*(cos^4(x/4) - cos^2(x/4)) + 1
+
+		// Estimate the optimum number of times to use the argument reduction.
+		if ( $len < 32 )
+		{
+			$k = (int)\ceil($len/3);
+			$y = \strval((1 / static::tinyPow(4, $k)));
+		}
+		else
+		{
+			$k = 16;
+			$y = '2.3283064365386962890625e-10';
+		}
+
+		$c->precision += $k;
+		$x = static::taylorSeries($c, 1, $x->times($y), new Decimal(1, $c));
+
+		// Reverse argument reduction
+		for ( $i = $k; $i--; )
+		{
+			$cos2x = $x->times($x);
+			$x = $cos2x->times($cos2x)->minus($cos2x)->times(8)->plus(1);
+		}
+
+		$c->precision -= $k;
+		return $x;
+	}
 
 	/**
 	 * Perform division in the specified base.
@@ -745,7 +889,7 @@ class DecimalHelper
 		$sd = null
 	) : string
 	{
-		if ( !$x->isFinity() )
+		if ( !$x->isFinite() )
 		{ return static::nonFiniteToString($x); }
 
 		$e = $x->_e();
@@ -1056,16 +1200,126 @@ class DecimalHelper
 	 *
 	 *  The result will always be correctly rounded.
 	 *
-	 * @param Decimal|float|int|string $x
+	 * @param Decimal $x
 	 * @param int|null $sd Significant digits
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
 	public static function naturalExponential ( 
-		$x, 
+		Decimal $x, 
 		$sd = null 
 	)
-	{}
+	{
+		$rep = 0;
+		$i = 0;
+		$k = 0;
+		$c = $x->_c();
+		$rm = $c->rounding;
+		$pr = $c->precision;
+
+		// 0/NaN/Infinity?
+		if ( !$x->isFinite() || $x->isNaN() || $x->isZero() )
+		{
+			$n = 0;
+
+			if ( $x->isFinite() )
+			{
+				if ( empty($x->_d()[0]) )
+				{ $n = 1; }
+				else if ( $x->_s() < 0 )
+				{ $n = 0; }
+				else 
+				{ $n = \INF; }
+			}
+			else if ( !$x->isNaN() )
+			{
+				if ( $x->_s() < 0 )
+				{ $n = 0; }
+				else 
+				{ $n = $x; }
+			}
+			else
+			{ $n = \NAN; }
+			
+			return new Decimal($n, $c);
+		}
+
+		if ( \is_null($sd) )
+		{
+			static::external(false);
+			$wpr = $pr;
+		}
+		else 
+		{ $wpr = $sd; }
+
+		$t = new Decimal(0.03125, $c);
+
+		// while abs(x) >= 0.1
+		while ( $x->_e() > -2 )
+		{
+			// x = x / 2^5
+			$x = $x->times($t);
+			$k += 5;
+		}
+
+		// Use 2 * log10(2^k) + 5 (empirically derived) 
+		// to estimate the increase in precision
+		// necessary to ensure the first 4 rounding 
+		// digits are correct.
+		$guard = ((\log(\pow(2, $k))/2.302585092994046) * 2 + 5 ) | 0;
+
+		$wpr += $guard;
+
+		$denominator = $pow = $sum = new Decimal(1, $c);
+		$c->precision = $wpr;
+
+		for ( ;; )
+		{
+			$pow = static::finalise($pow->times($x), $wpr, 1);
+			$denominator = $denominator->times(++$i);
+			$t = $sum->plus(static::divide($pow, $denominator, $wpr, 1));
+
+			if ( 
+				static::slice(static::digitsToString($t->_d()), 0, $wpr) 
+				=== static::slice(static::digitsToString($sum->_d()), 0, $wpr) 
+			)
+			{
+				$j = $k;
+
+				while ( $j-- ) 
+				{ $sum = static::finalise($sum->times($sum), $wpr, 1); }
+
+				// Check to see if the first 4 rounding digits are [49]999.
+				// If so, repeat the summation with a higher precision, otherwise
+				// e.g. with precision: 18, rounding: 1
+				// exp(18.404272462595034083567793919843761) = 98372560.1229999999 (should be 98372560.123)
+				// `wpr - guard` is the index of first rounding digit.
+
+				if ( \is_null($sd) )
+				{
+					if ( $rep < 3 && static::checkRoundingDigits($sum->_d(), $wpr - $guard, $rm, $rep) )
+					{
+						$c->precision = $wpr += 10;
+						$denominator = $pow = $t = new Decimal(1,$c);
+						$i = 0;
+						$rep++;
+					}
+					else
+					{ 
+						static::external(true);
+						return static::finalise($sum, ($c->precision = $pr), $rm, true);
+					}
+				}
+				else
+				{
+					$c->precision = $pr;
+					return $sum;
+				}
+			}
+			
+			$sum = $t;
+		}
+	}
 
 	/**
 	 * Not implemented.
@@ -1082,16 +1336,171 @@ class DecimalHelper
 	 *
 	 *  ln(n) (n != 1) is non-terminating.
 	 *
-	 * @param Decimal|float|int|string $x
+	 * @param Decimal|float|int|string $y
 	 * @param int|null $sd Significant digits
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
 	public static function naturalLogarithm ( 
-		$x, 
+		Decimal $y, 
 		$sd = null 
 	)
-	{}
+	{
+		$x = $y;
+		$n = 1;
+		$guard = 10;
+		$xd = $x->_d();
+		$c = $x->_c();
+		$rm = $c->rounding;
+		$pr = $c->precision;
+
+		// Is x negative or Infinity, NaN, 0 or 1?
+		if ( 
+			$x->isNegative() 
+			|| !$x->isFinite() 
+			|| $x->isNaN() 
+			|| $x->isZero() 
+			|| (empty($x->_e()) && $xd[0]??0 === 1 && \count($xd) === 1 ) 
+		)
+		{
+			$n = 0;
+
+			if ( $x->isZero() )
+			{ $n = -\INF; }
+			else if ( $x->_s() !== 1 )
+			{ $n = \NAN; }
+			else if ( $x->isFinite() )
+			{ $n = 0; }
+			else
+			{ $n = $x; }
+			
+			return new Decimal($n, $c);
+		}
+
+		if ( \is_null($sd) )
+		{
+			static::external(false);
+			$wpr = $pr;
+		}
+		else 
+		{ $wpr = $sd; }
+
+		$c->precision = $wpr += $guard;
+		$ds = static::digitsToString($xd);
+		$ds0 = (int)$ds[0];
+		
+		if ( \abs(($e = $x->_e())) < 1.5e15 )
+		{
+			// Argument reduction.
+			// The series converges faster the closer 
+			// the argument is to 1, so using
+			// ln(a^b) = b * ln(a),   ln(a) = ln(a^b) / b
+			// multiply the argument by itself until the 
+			// leading digits of the significand are 7, 8, 9,
+			// 10, 11, 12 or 13, recording the number of 
+			// multiplications so the sum of the series can
+			// later be divided by this number, then separate
+			// out the power of 10 using
+			// ln(a*10^b) = ln(a) + b*ln(10).
+
+			// max n is 21 (gives 0.9, 1.0 or 1.1) (9e15 / 21 = 4.2e14).
+			// max n is 6 (gives 0.7 - 1.3)
+			while ( ($ds0 < 7 && $ds0 != 1) || ( $ds0 == 1 && (int)$ds[1] > 3 ) )
+			{
+				$x = $x->times($y);
+				$ds = static::digitsToString($x->_d());
+				$ds0 = (int)$ds[0];
+				$n++;
+			}
+
+			$e = $x->_e();
+
+			if ( $ds0 > 1 )
+			{
+				$x = new Decimal('0.'.$ds, $c);
+				$e++;
+			}
+			else
+			{ $x = new Decimal($ds0.'.'.static::slice($ds,1), $c); }
+		}
+		else 
+		{
+			// The argument reduction method above may result in overflow if the argument y is a massive
+			// number with exponent >= 1500000000000000 (9e15 / 6 = 1.5e15), so instead recall this
+			// function using ln(x*10^e) = ln(x) + e*ln(10).
+			$t = (static::getLn10($c, $wpr+2, $pr))->times($e??'NAN'.'');
+			$x = static::naturalLogarithm(new Decimal($ds0.'.'.static::slice($ds,1), $c), $wpr-$guard)->plus($t);
+			$c->precision = $pr;
+
+			static::external(true);
+			return \is_null($sd) ? static::finalise($x, $pr, $rm, true) : $x;
+		}
+
+		// x1 is x reduced to a value near 1.
+		$x1 = $x;
+		
+		// Taylor series.
+		// ln(y) = ln((1 + x)/(1 - x)) = 2(x + x^3/3 + x^5/5 + x^7/7 + ...)
+		// where x = (y - 1)/(y + 1)    (|x| < 1)
+		$sum = $numerator = $x = static::divide($x->minus(1), $x->plus(1), $wpr, 1);
+		$x2 = static::finalise($x->times($x), $wpr, 1);
+		$denominator = 3;
+
+		for (;;)
+		{
+			$numerator = static::finalise($numerator->times($x2), $wpr, 1);
+			$t = $sum->plus(static::divide($numerator, new Decimal($denominator,$c), $wpr, 1));
+
+			if ( 
+				static::slice(static::digitsToString($t->_d()), 0, $wpr) 
+				===  static::slice(static::digitsToString($sum->_d()), 0, $wpr) 
+			)
+			{
+				$sum = $sum->times(2);
+
+				// Reverse the argument reduction. Check that e is 
+				// not 0 because, besides preventing an unnecessary 
+				// calculation, -0 + 0 = +0 and to ensure correct 
+				// rounding -0 needs to stay -0.
+				if ( $e !== 0 )
+				{ $sum = $sum->plus(static::getLn10($c, $wpr+2, $pr))->times($e.''); }
+
+				$sum = static::divide($sum, new Decimal($n, $c), $wpr, 1 );
+
+				// Is rm > 3 and the first 4 rounding digits 4999, 
+				// or rm < 4 (or the summation has been repeated previously) 
+				// and the first 4 rounding digits 9999?
+				// If so, restart the summation with a higher precision, otherwise
+				// e.g. with precision: 12, rounding: 1
+				// ln(135520028.6126091714265381533) = 18.7246299999
+				// when it should be 18.72463.
+				// `wpr - guard` is the index of first rounding digit.
+				if ( \is_null($sd) )
+				{
+					if ( static::checkRoundingDigits($sum->_d(), $wpr - $guard, $rm, $rep??null) )
+					{
+						$c->precision = $wpr += $guard;
+						$t = $numerator = $x = static::divide($x1->minus(1), $x1->plus(1), $wpr, 1);
+						$x2 = static::finalise($x->times($x), $wpr, 1);
+						$denominator = $rep = 1;
+					}
+					else
+					{ 
+						static::external(true);
+						return static::finalise($sum, ($c->precision = $pr), $rm, true);
+					}
+				}
+				else
+				{
+					$c->precision = $pr;
+					return $sum;
+				}
+			}
+
+			$sum = $t;
+			$denominator += 2;
+		}
+	}
 
 	/**
 	 * Return the value of Decimal $x as ±Infinity 
@@ -1104,7 +1513,7 @@ class DecimalHelper
 	public static function nonFiniteToString (
 		$x
 	) : string
-	{ return is_nan($x->_s()) ? 'NAN' : 'INF'; }
+	{ return $x->isNaN() ? 'NAN' : ($x->_s() < 1 ? '-INF' : 'INF'); }
 
 	/**
 	 * Parse the value of a new Decimal $x 
@@ -1281,7 +1690,7 @@ class DecimalHelper
 			$divisor = self::intPow($x->_c(), new Decimal($base, $x->_c()), $i, $i * 2);
 		}
 
-		$xd = self::convertBase($str, $base, DecimalHelper::BASE);
+		$xd = self::convertBase($str, $base, static::BASE);
 		$xe = \count($xd) - 1;
 
 		// Remove trailing zeros
@@ -1333,42 +1742,99 @@ class DecimalHelper
 	}
 
 	/**
-	 * Not implemented
 	 * sin(x) = x - x^3/3! + x^5/5! - ...
 	 * |x| < pi/2
 	 *
-	 * @param DecimalConfig $config
-	 * @param Decimal|float|int|string $x
+	 * @param DecimalConfig $c
+	 * @param Decimal $x
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
 	public static function sine (
-		DecimalConfig $config,
-		$x
-	)
-	{}
+		DecimalConfig $c,
+		Decimal $x
+	) : Decimal
+	{
+		$len = \count($x->_d());
+
+		if ( $len < 3 )
+		{ return static::taylorSeries($c, 2, $x, $x); }
+
+		// Argument reduction: sin(5x) = 16*sin^5(x) - 20*sin^3(x) + 5*sin(x)
+		// i.e. sin(x) = 16*sin^5(x/5) - 20*sin^3(x/5) + 5*sin(x/5)
+		// and  sin(x) = sin(x/5)(5 + sin^2(x/5)(16sin^2(x/5) - 20))
+
+		// Estimate the optimum number of times to use the argument reduction.
+		$k = 1.4 * \sqrt($len);
+		$k = $k > 16 ? 16 : $k | 0;
+
+		$x = $x->times(1/static::tinyPow(5, $k));
+		$x = static::taylorSeries($c, 2, $x, $x);
+
+		// Reverse argument reduction
+		$d5 = new Decimal(5, $c);
+		$d16 = new Decimal(16, $c);
+		$d20 = new Decimal(20, $c);
+
+		for ( ; $k--; )
+		{
+			$sin2_x = $x->times($x);
+			$x = $x->times($d5->plus($sin2_x->times($d16->times($sin2_x)->minus($d20))));
+		}
+
+		return $x;
+	}
 
 	/**
-	 * Not implemented
 	 * Calculate Taylor series for `cos`, `cosh`, 
 	 * `sin` and `sinh`.
 	 *
-	 * @param DecimalConfig $config
-	 * @param Decimal|float|int|string $n
-	 * @param Decimal|float|int|string $x
-	 * @param Decimal|float|int|string $y
+	 * @param DecimalConfig $c
+	 * @param integer $n
+	 * @param Decimal $x
+	 * @param Decimal $y
 	 * @param bool $isHyperbolic
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
 	public static function taylorSeries (
-		DecimalConfig $config,
-		$n,
-		$x,
-		$y,
-		$isHyperbolic
+		DecimalConfig $c,
+		int $n,
+		Decimal $x,
+		Decimal $y,
+		$isHyperbolic = false
 	)
-	{}
+	{
+		$i = 1;
+		$pr = $c->precision;
+		$k = (int)\ceil($pr/Decimal::LOG_BASE);
+
+		static::external(false);
+
+		$x2 = $x->times($x);
+		$u = new Decimal($y, $c);
+
+		for ( ;; )
+		{
+			$t = static::divide($u->times($x2), new Decimal($n++ * $n++, $c), $pr, 1);
+			$u = $isHyperbolic ? $y->plus($t) : $y->minus($t);
+			$y = static::divide($t->times($x2), new Decimal($n++ * $n++, $c), $pr, 1);
+			$t = $u->plus($y);
+
+			if ( isset($t->_d()[$k]) )
+			{
+				for ( $j = $k; $t->_d($j) === $u->_d[$j]??null && $j--; );
+
+				if ( $j == -1 )
+				{ break; }
+			}
+		}
+
+		static::external(true);
+		$t->d(static::arraySlice($t->_d(), 0, $k+1));
+
+		return $t;
+	}
 
 	/**
 	 * Exponent $e must be positive and non-zero.
@@ -1395,43 +1861,244 @@ class DecimalHelper
 	}
 
 	/**
-	 * Not implemented
 	 * Return the absolute value of $x reduced to 
 	 * less than or equal to half pi.
 	 *
-	 * @param DecimalConfig $config
-	 * @param Decimal|float|int|string $x
+	 * @param DecimalConfig $c
+	 * @param Decimal $x
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
 	public static function toLessThanHalfPi (
-		DecimalConfig $config,
-		$x
+		DecimalConfig $c,
+		Decimal $x
 	)
-	{}
+	{
+		$isNeg = $x->isNeg();
+		$pi = static::getPi($c, $c->precision, 1);
+		$halfPi = $pi->times(0.5);
+
+		$x = $x->abs();
+
+		if ( $x->lte($halfPi) )
+		{
+			static::quadrant($isNeg ? 4 : 1);
+			return $x;
+		}
+
+		$t = $x->divToInt($pi);
+
+		if ( $t->isZero() )
+		{ static::quadrant($isNeg ? 3 : 2); }
+		else 
+		{
+			$x = $x->minus($t->times($pi));
+
+			// 0 <= x < pi
+			if ( $x->lte($halfPi) )
+			{ 
+				static::quadrant(static::isOdd($t) ? ($isNeg ? 2 : 3) : ($isNeg ? 4 : 1));
+				return $x;
+			}
+
+			static::quadrant(static::isOdd($t) ? ($isNeg ? 1 : 4) : ($isNeg ? 3 : 2));
+		}
+
+		return $x->minus($pi)->abs();
+	}
 
 	/**
-	 * Not implemented
 	 * Return the value of Decimal $x as a string 
 	 * in base $bo.
 	 * 
 	 * If the optional $sd argument is present 
 	 * include a binary exponent suffix.
 	 *
-	 * @param Decimal|float|int|string $x
-	 * @param [type] $bo
-	 * @param integer $sd
-	 * @param integer $rm
+	 * @param Decimal $x
+	 * @param integer $baseOut Base out.
+	 * @param integer $sd Significant digits.
+	 * @param integer $rm Rounding mode.
 	 * @since 1.0.0
 	 * @return string
 	 */
 	public static function toStringBinary ( 
-		$x, 
-		$bo, 
-		$sd = null, 
-		$rm = null 
+		Decimal $x, 
+		int $baseOut, 
+		int $sd = null, 
+		int $rm = null 
 	)
-	{}
+	{
+		$c = $x->_c();
+		$isExp = !\is_null($sd);
+
+		if ( $isExp )
+		{
+			static::checkInt32($sd, 1, DecimalConfig::MAX_DIGITS);
+
+			if ( \is_null($rm) )
+			{ $rm = $c->rounding; }
+			else 
+			{ static::checkInt32($rm, 0, 8); }
+		}
+		else 
+		{
+			$sd = $c->precision;
+			$rm = $c->rounding;
+		}
+
+		if ( !$x->isFinite() )
+		{ $str = static::nonFiniteToString($x); }
+		{
+			$str = static::finiteToString($x);
+			$i = \strpos($str, '.');
+
+			// Use exponential notation according to `toExpPos` and `toExpNeg`? No, but if required:
+			// maxBinaryExponent = floor((decimalExponent + 1) * log[2](10))
+			// minBinaryExponent = floor(decimalExponent * log[2](10))
+			// log[2](10) = 3.321928094887362347870319429489390175864
+
+			if ( $isExp )
+			{
+				$base = 2;
+	
+				if ( $baseOut === 16 )
+				{ $sd = $sd * 4 - 3; }
+				else 
+				{ $sd = $sd * 3 - 2; }
+			}
+			else 
+			{ $base = $baseOut; }
+
+			
+			// Convert the number as an integer then divide the 
+			// result by its base raised to a power such
+			// that the fraction part will be restored.
+
+			// Non-integer.
+			if ( $i >= 0 )
+			{
+				$str = \str_replace('.', '', $str);
+				$y = new Decimal(1, $c);
+				
+				$y->e(\strlen($str)-$i);
+				$y->d(static::convertBase(static::finiteToString($y), 10, $base));
+				$y->e(\count($y->_d()));
+			}
+
+			$xd = static::convertBase($str, 10, $base);
+			$e = $len = \count($xd);
+
+			// Remove trailing zeros
+			for ( ; $xd[--$len] == 0; )
+			{ \array_pop($xd); }
+
+			if ( empty($xd[0]) )
+			{ $str = $isExp ? '0p+0' : 0; }
+			else
+			{
+				$roundUp = false; 
+
+				if ( $i < 0 )
+				{ $e--; }
+				else
+				{
+					$x = new Decimal($x, $c);
+					$x->d($xd);
+					$x->e($e);
+					$x = static::divide($x, $y, $sd, $rm, 0, $base);
+					$xd = $x->_d();
+					$e = $x->_e();
+					$roundUp = static::_inexact();
+				}
+
+				$i = $xd[$sd]??null;
+				$k = $base/2;
+				$roundUp = $roundUp || isset($xd[$sd+1]);
+
+				$roundUp =
+					$rm < 4 ?
+					(!empty($i) || $roundUp) && ( $rm === 0 || $rm === ($x->_s() < 0 ? 3 : 2) ) :
+						$i > $k || 
+						( $i === $k && 
+							($rm === 4 || 
+								$roundUp ||
+									($rm === 6 && $xd[$sd-1] & 1) ||
+										$rm === ($x->_s() < 0 ? 8 : 7)));
+
+				$xd = static::arraySlice($xd, 0, $sd);
+
+				if ( $roundUp )
+				{
+					// Rounding up may mean the previous digit 
+					// has to be rounded up and so on.
+					for ( ; ++$xd[--$sd] > $base - 1; )
+					{
+						$xd[$sd] = 0;
+
+						if ( $sd == 0 )
+						{
+							++$e;
+							\array_shift($xd, 1);
+						}
+					}
+				}
+
+				
+				// Determine trailing zeros.
+				for ($len = \count($xd); isset($xd[$len - 1]); --$len);
+
+				// E.g. [4, 11, 15] becomes 4bf.
+				for ($i = 0, $str = ''; $i < $len; $i++) 
+				{ $str .= DecimalConfig::NUMERALS[$xd[$i]]; }
+
+				// Add binary exponent suffix?
+				if ( $isExp )
+				{
+					if ( $len > 1 )
+					{
+						if ( $baseOut == 16 || $baseOut == 8 )
+						{
+							$i = $baseOut == 16 ? 4 : 3;
+
+							for (--$len; $len % $i; $len++) 
+							{ $str .= '0'; }
+
+							$xd = static::convertBase($str, $base, $baseOut);
+
+							for ($len = \count($xd); isset($xd[$len - 1]); --$len);
+
+							// xd[0] will always be be 1
+							for ( $i = 1, $str = '1.'; $i < $len; $i++ )
+							{ $str .= DecimalConfig::NUMERALS[$xd[$i]]; }
+						}
+					}
+
+					$str = $str . ($e < 0 ? 'p':'p+') + $e;
+				}
+				else if ( $e < 0 )
+				{
+					for (; ++$e;)
+					{ $str = '0'.$str; }
+
+					$str = '0.'.$str;
+				}
+				else
+				{
+					if ( ++$e > $len )
+					{
+						for ( $e -= $len; ++$e; )
+						{ $str .= '0'; }
+					}
+					else if ( $e < $len )
+					{ $str = static::slice($str, 0, $e).'.'.static::slice($str, $e);}
+				}
+			}
+
+			$str = ($baseOut == 16 ? '0x' : ($baseOut == 2 ? '0b' : ($baseOut == 8 ? '0o' : '')));
+		}
+
+		return $x->_s() < 0 ? '-'.$str : $str;
+	}
 
 	/**
 	 * Truncate array to $length limit.
