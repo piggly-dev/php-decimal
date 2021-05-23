@@ -5,49 +5,52 @@ use PHPUnit\Framework\TestCase;
 use Piggly\Decimal\Decimal;
 use Piggly\Decimal\DecimalConfig;
 
+/**
+ * @coversDefaultClass \Piggly\Decimal\Decimal
+ */
 class CeilMethodDecimalTest extends TestCase
 {
 	/**
-	 * Configuration
+	 * Setup Decimal configuration.
 	 *
-	 * @var DecimalConfig
+	 * @return void
 	 */
-	protected $_config;
-
 	protected function setUp () : void
 	{
-		$this->_config = DecimalConfig::clone([
-			'precision' => 20,
-			'rounding' => 4,
-			'toExpNeg' => -100,
-			'toExpPos' => 100,
-			'maxE' => 9e15,
-			'minE' => -9e15,
-		]);
+		DecimalConfig
+			::instance()
+			->set([
+				'precision' => 20,
+				'rounding' => 4,
+				'toExpNeg' => -100,
+				'toExpPos' => 100,
+				'maxE' => 9e15,
+				'minE' => -9e15,
+			]);
 	}
 
 	/**
 	 * Assert if is matching the expected data.
 	 *
+	 * @covers ::ceil
+	 * @covers ::ceilOf
 	 * @test Expecting positive assertion
-    * @dataProvider stringMatching
-	 * @param array $coefficient
-	 * @param integer $exponent
-	 * @param integer $sign
+    * @dataProvider dataSetOne
+	 * @param string $expected Expected data.
 	 * @param Decimal|integer|float|string $n
 	 * @return void
 	 */
-	public function testIsMatchingWithExpected (
+	public function testSetOne (
 		string $expected,
 		$n 
 	)
-	{ $this->assertEquals($expected, (new Decimal($n, $this->_config))->ceil()->valueOf()); }
+	{ $this->assertEquals($expected, (new Decimal($n))->ceil()->valueOf()); }
 	
 	/**
-	 * Provider for testIsMatchingWithExpected().
+	 * Provider for testSetOne().
 	 * @return array
 	 */
-	public function stringMatching() : array
+	public function dataSetOne () : array
 	{
 		return [
 			['0', 0],

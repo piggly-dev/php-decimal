@@ -117,7 +117,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return void
 	 */
-	public static function quadrant ( bool $quadrant )
+	public static function quadrant ( int $quadrant )
 	{ static::$_quadrant = $quadrant; }
 
 	/**
@@ -126,23 +126,23 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return int
 	 */
-	public static function _quadrant () : bool
+	public static function _quadrant () : int
 	{ return static::$_quadrant; }
 
 	/**
 	 * Convert an array of digits to a string.
 	 *
-	 * @param array $d
+	 * @param array|null $d
 	 * @since 1.0.0
 	 * @return string
 	 */
 	public static function digitsToString (
-		array $d
+		?array $d
 	) : string
 	{
-		$indexOfLastWord = \count($d)-1;
+		$indexOfLastWord = \is_null($d) ? 0 : \count($d)-1;
 		$str = '';
-		$w = $d[0];
+		$w = $d[0]??0;
 
 		if ( $indexOfLastWord > 0 )
 		{
@@ -170,7 +170,7 @@ class DecimalHelper
 		{ return '0'; }
 
 		// Remove trailing zeros of last w.
-		for (; $w % 10 === 0;) 
+		for (; $w != 0 && $w % 10 === 0;) 
 		{ $w /= 10; }
 
 		return $str.$w;
@@ -192,8 +192,11 @@ class DecimalHelper
 		int $max
 	)
 	{
-		if ( $i !== (int)\floor($i) || $i < $min || $i > $max )
-		{ throw new RuntimeException(\sprintf('`%s` is not a valid int32.', (string)$i)); }
+		if ( $i === 0 || $i === '0' || $i === '-0' && $min <= 0 )
+		{ return; }
+
+		if ( !\is_int($i) || $i < $min || $i > $max )
+		{ throw new RuntimeException(\sprintf('`%s` is not a valid int32.', gettype($i))); }
 	}
 
 	/**
@@ -234,7 +237,7 @@ class DecimalHelper
 		// E.g. if within the word 3487563 the first rounding digit is 5,
 		// then i = 4, k = 1000, rd = 3487563 % 1000 = 563
 		$k = (int)\pow(10, Decimal::LOG_BASE - 1);
-		$rd = $d[$di] % $k | 0;
+		$rd = ($d[$di]??0) % $k | 0;
 
 		if ( \is_null($repeating) )
 		{
@@ -245,16 +248,20 @@ class DecimalHelper
 				else if ( $i == 1 )
 				{ $rd = ($rd/10) | 0; }
 
-				$r = ($rm < 4 && $rd == 99999)
-						|| ($rm > 3 && $rd == 49999)
-						|| $rd == 50000
-						|| $rd = 0;
+				$r = (
+					($rm < 4 && $rd == 99999) || 
+					($rm > 3 && $rd == 49999) ||
+					$rd == 50000 || 
+					$rd == 0
+				);
 			}
 			else 
 			{
-				$r = ((($rm < 4 && $rd + 1 == $k) || ($rm > 3 && $rd + 1 == $k / 2)) 
-						&& (($d[$di + 1] / $k / 100) | 0) == (int)\pow(10, $i - 2) - 1) 
-						|| (($rd == $k / 2 || $rd == 0) && (($d[$di + 1] / $k / 100) | 0) == 0);
+				// TODO IF WRONG
+				$r = (
+					((($rm < 4 && $rd + 1 == $k) || ($rm > 3 && $rd + 1 == $k / 2)) && 
+					(($d[$di + 1] / $k / 100) | 0) == (int)\pow(10, $i - 2) - 1) ||
+					(($rd == $k / 2 || $rd == 0) && (($d[$di + 1] / $k / 100) | 0) == 0));
 			}
 		}
 		else
@@ -350,7 +357,7 @@ class DecimalHelper
 		// Estimate the optimum number of times to use the argument reduction.
 		if ( $len < 32 )
 		{
-			$k = (int)\ceil($len/3);
+			$k = \ceil($len/3);
 			$y = \strval((1 / static::tinyPow(4, $k)));
 		}
 		else
@@ -661,7 +668,7 @@ class DecimalHelper
 	 * using rounding mode $rm.
 	 *
 	 * @param Decimal $x
-	 * @param integer $sd
+	 * @param integer|float $sd
 	 * @param integer $rm
 	 * @param boolean $isTruncated
 	 * @return Decimal
@@ -673,7 +680,7 @@ class DecimalHelper
 		$isTruncated = false
 	) : Decimal
 	{
-		$x = clone $x;
+		$x = Decimal::clone($x);
 		$config = $x->_c();
 		$xdi = 0;
 
@@ -685,7 +692,7 @@ class DecimalHelper
 				$xd = $x->_d();
 
 				// Infinity/NaN
-				if ( is_null($xd) || empty($xd) )
+				if ( !$x->isFinite() || $x->isNaN() )
 				{ return $x; }
 
 				// rd: the rounding digit, i.e. the digit after the digit that may be rounded up.
@@ -759,12 +766,23 @@ class DecimalHelper
 				// EXPRESSION ERROR
 				$isTruncated = $isTruncated || $sd < 0 || isset($xd[$xdi+1]) || ($j < 0 ? $w : $w % \pow(10, $digits - $j - 1 ));
 
-				$roundUp = $rm < 4
-					? ($rd || $isTruncated) && ($rm == 0 || $rm == ($x->_s() < 0 ? 3 : 2) )
-					: $rd > 5 || $rd == 5 && ($rm == 4 || $isTruncated || $rm == 6 &&
-						// Check whether the digit to the left of the rounding digit is odd.
-						(($i > 0 ? ($j > 0 ? $w / \pow(10, $digits - $j) : 0) : $xd[$xdi - 1]) % 10) & 1 ||
-						$rm == ($x->_s() < 0 ? 8 : 7));
+				$roundUp =
+					$rm < 4 ?
+					($rd || $isTruncated) && ($rm == 0 || $rm == ($x->_s() < 0 ? 3 : 2)) :
+					$rd > 5 ||
+					($rd == 5 &&
+						($rm == 4 ||
+							$isTruncated ||
+							($rm == 6 &&
+								// Check whether the digit to the left of the rounding digit is odd.
+								($i > 0 ?
+									($j > 0 ?
+									$w / \pow(10, $digits - $j) :
+									0) :
+									$xd[$xdi - 1]) %
+								10 &
+								1) ||
+							$rm == ($x->_s() < 0 ? 8 : 7)));
 
 				if ( $sd < 1 || !isset($xd[0]) )
 				{
@@ -793,13 +811,13 @@ class DecimalHelper
 				// Remove excess digits.
 				if ( $i == 0 )
 				{
-					$xd = \array_slice($xd, 0, $xdi);
+					$xd = DecimalHelper::arraySlice($xd, 0, $xdi);
 					$k = 1;
 					$xdi--;
 				}
 				else
 				{
-					$xd = \array_slice($xd, 0, $xdi+1);
+					$xd = DecimalHelper::arraySlice($xd, 0, $xdi+1);
 					$k = \pow(10, Decimal::LOG_BASE - $i);
 
 					// E.g. 56700 becomes 56000 if 7 is the rounding digit.
@@ -847,7 +865,7 @@ class DecimalHelper
 				}
 
 				// Remove trailing zeros.
-				for ($i = \count($xd); $xd[--$i] === 0;) 
+				for ($i = \count($xd); empty($xd[--$i]);) 
 				{ \array_pop($xd); }
 
 				$x->d($xd);
@@ -1041,6 +1059,8 @@ class DecimalHelper
 	/**
 	 * Get an string with $k zeros.
 	 *
+	 * @todo Need to test performance.
+	 * @todo ? Try to be faster when $k is greater than 5999999999.
 	 * @param integer $k Quantity of zeros.
 	 * @since 1.0.0
 	 * @return string
@@ -1048,13 +1068,52 @@ class DecimalHelper
 	public static function getZeroString (
 		int $k
 	) : string
-	{
-		$zs = '';
+	{ 
+		$zn  = '';
 
-		for (; $k--;) 
-		{ $zs .= '0'; }
+		// old style (too slow):
+		// for ( ; $k--; )
+		// { $zn .= '0'; }
 
-		return $zs;
+		// new style:
+
+		// str_repeat is faster than a for-loop
+		
+		// However, str_repeat becames slow with integers 
+		// greater than 999999999, then, first we decrease 
+		// 999999999 from $i till $i < 999999999, then we
+		// concat 0x999999999 $nin times and concat $i if
+		// is needed. It will give us power to concat
+		// 999999999+5000000000 of zeros.
+
+		// Numbers <= 9...0.000 seconds
+		// Numbers <= 99...0.000 seconds
+		// Numbers <= 999...0.000 seconds
+		// Numbers <= 9999...0.000 seconds
+		// Numbers <= 99999...0.000 seconds
+		// Numbers <= 999999...0.001 seconds
+		// Numbers <= 9999999...0.007 seconds
+		// Numbers <= 99999999...0.037 seconds
+		// Numbers <= 999999999...0.349 seconds
+		// Numbers <= 1999999999...1.670 seconds
+		// Numbers <= 2999999999...2.432 seconds
+		// Numbers <= 3999999999...4.840 seconds
+		// Numbers <= 4999999999...5.420 seconds
+		// Numbers <= 5999999999...6.529 seconds
+
+		// After 5999999999, however, memory usage is too
+		// heavy, should we fix it?
+
+		while ( $k > 999999999 )
+		{
+			$k = $k > PHP_INT_MAX ? \bcsub($k, 999999999) : $k-999999999;
+			$zn .= str_repeat('0', 999999999);
+		}
+	
+		if ( $k != 0 )
+		{ $zn .= str_repeat('0', $k); }
+
+		return $zn; 
 	}
 
 	/**
@@ -1266,7 +1325,7 @@ class DecimalHelper
 		// to estimate the increase in precision
 		// necessary to ensure the first 4 rounding 
 		// digits are correct.
-		$guard = ((\log(\pow(2, $k))/2.302585092994046) * 2 + 5 ) | 0;
+		$guard = ((\log(\pow(2, $k))/\M_LN10) * 2 + 5 ) | 0;
 
 		$wpr += $guard;
 
@@ -1360,7 +1419,7 @@ class DecimalHelper
 			|| !$x->isFinite() 
 			|| $x->isNaN() 
 			|| $x->isZero() 
-			|| (empty($x->_e()) && $xd[0]??0 === 1 && \count($xd) === 1 ) 
+			|| (($xd[0]??null) === 1 && \count($xd) === 1) 
 		)
 		{
 			$n = 0;
@@ -1446,7 +1505,7 @@ class DecimalHelper
 		$x2 = static::finalise($x->times($x), $wpr, 1);
 		$denominator = 3;
 
-		for (;;)
+		while ( true )
 		{
 			$numerator = static::finalise($numerator->times($x2), $wpr, 1);
 			$t = $sum->plus(static::divide($numerator, new Decimal($denominator,$c), $wpr, 1));
@@ -1463,7 +1522,7 @@ class DecimalHelper
 				// calculation, -0 + 0 = +0 and to ensure correct 
 				// rounding -0 needs to stay -0.
 				if ( $e !== 0 )
-				{ $sum = $sum->plus(static::getLn10($c, $wpr+2, $pr))->times($e.''); }
+				{ $sum = $sum->plus(static::getLn10($c, $wpr+2, $pr)->times($e.'')); }
 
 				$sum = static::divide($sum, new Decimal($n, $c), $wpr, 1 );
 
@@ -1513,7 +1572,7 @@ class DecimalHelper
 	public static function nonFiniteToString (
 		$x
 	) : string
-	{ return $x->isNaN() ? 'NAN' : ($x->_s() < 1 ? '-INF' : 'INF'); }
+	{ return $x->isNaN() ? 'NAN' : 'INF'; }
 
 	/**
 	 * Parse the value of a new Decimal $x 
@@ -1823,11 +1882,22 @@ class DecimalHelper
 
 			if ( isset($t->_d()[$k]) )
 			{
-				for ( $j = $k; $t->_d($j) === $u->_d[$j]??null && $j--; );
+				for ( 
+					$j = $k; 
+					isset($t->_d()[$j], $u->_d()[$j]) 
+						&& $t->_d()[$j] === $u->_d()[$j] 
+						&& $j--; 
+				);
 
 				if ( $j == -1 )
 				{ break; }
 			}
+
+			$j = $u;
+			$u = $y;
+			$y = $t;
+			$t = $j;
+			$i++;
 		}
 
 		static::external(true);
@@ -1924,7 +1994,7 @@ class DecimalHelper
 	public static function toStringBinary ( 
 		Decimal $x, 
 		int $baseOut, 
-		int $sd = null, 
+		$sd = null, 
 		int $rm = null 
 	)
 	{
@@ -1948,6 +2018,7 @@ class DecimalHelper
 
 		if ( !$x->isFinite() )
 		{ $str = static::nonFiniteToString($x); }
+		else
 		{
 			$str = static::finiteToString($x);
 			$i = \strpos($str, '.');
@@ -1962,20 +2033,19 @@ class DecimalHelper
 				$base = 2;
 	
 				if ( $baseOut === 16 )
-				{ $sd = $sd * 4 - 3; }
-				else 
-				{ $sd = $sd * 3 - 2; }
+				{ $sd = ($sd * 4) - 3; }
+				else if ( $baseOut === 8 )
+				{ $sd = ($sd * 3) - 2; }
 			}
 			else 
 			{ $base = $baseOut; }
 
-			
 			// Convert the number as an integer then divide the 
 			// result by its base raised to a power such
 			// that the fraction part will be restored.
 
 			// Non-integer.
-			if ( $i >= 0 )
+			if ( $i !== false )
 			{
 				$str = \str_replace('.', '', $str);
 				$y = new Decimal(1, $c);
@@ -1989,16 +2059,16 @@ class DecimalHelper
 			$e = $len = \count($xd);
 
 			// Remove trailing zeros
-			for ( ; $xd[--$len] == 0; )
+			for ( ; isset($xd[--$len]) && $xd[$len] == 0; )
 			{ \array_pop($xd); }
 
 			if ( empty($xd[0]) )
-			{ $str = $isExp ? '0p+0' : 0; }
+			{ $str = $isExp ? '0p+0' : '0'; }
 			else
 			{
 				$roundUp = false; 
 
-				if ( $i < 0 )
+				if ( $i === false )
 				{ $e--; }
 				else
 				{
@@ -2017,7 +2087,7 @@ class DecimalHelper
 
 				$roundUp =
 					$rm < 4 ?
-					(!empty($i) || $roundUp) && ( $rm === 0 || $rm === ($x->_s() < 0 ? 3 : 2) ) :
+					(!\is_null($i) || $roundUp) && ( $rm === 0 || $rm === ($x->_s() < 0 ? 3 : 2) ) :
 						$i > $k || 
 						( $i === $k && 
 							($rm === 4 || 
@@ -2031,21 +2101,20 @@ class DecimalHelper
 				{
 					// Rounding up may mean the previous digit 
 					// has to be rounded up and so on.
-					for ( ; ++$xd[--$sd] > $base - 1; )
+					for ( ; isset($xd[--$sd]) && ++$xd[$sd] > $base - 1; )
 					{
 						$xd[$sd] = 0;
 
-						if ( $sd == 0 )
+						if ( !$sd )
 						{
 							++$e;
-							\array_shift($xd, 1);
+							\array_unshift($xd, 1);
 						}
 					}
 				}
-
 				
 				// Determine trailing zeros.
-				for ($len = \count($xd); isset($xd[$len - 1]); --$len);
+				for ($len = \count($xd); empty($xd[$len - 1]); --$len);
 
 				// E.g. [4, 11, 15] becomes 4bf.
 				for ($i = 0, $str = ''; $i < $len; $i++) 
@@ -2065,15 +2134,17 @@ class DecimalHelper
 
 							$xd = static::convertBase($str, $base, $baseOut);
 
-							for ($len = \count($xd); isset($xd[$len - 1]); --$len);
+							for ($len = \count($xd); isset($xd[$len - 1]) && !$xd[$len - 1]; --$len);
 
 							// xd[0] will always be be 1
 							for ( $i = 1, $str = '1.'; $i < $len; $i++ )
 							{ $str .= DecimalConfig::NUMERALS[$xd[$i]]; }
 						}
+						else
+						{ $str = $str[0].'.'.static::slice($str, 1); }
 					}
 
-					$str = $str . ($e < 0 ? 'p':'p+') + $e;
+					$str = $str . ($e < 0 ? 'p':'p+') . $e;
 				}
 				else if ( $e < 0 )
 				{
@@ -2086,15 +2157,15 @@ class DecimalHelper
 				{
 					if ( ++$e > $len )
 					{
-						for ( $e -= $len; ++$e; )
+						for ( $e -= $len; $e--; )
 						{ $str .= '0'; }
 					}
 					else if ( $e < $len )
-					{ $str = static::slice($str, 0, $e).'.'.static::slice($str, $e);}
+					{ $str = static::slice($str, 0, $e).'.'.static::slice($str, $e); }
 				}
 			}
 
-			$str = ($baseOut == 16 ? '0x' : ($baseOut == 2 ? '0b' : ($baseOut == 8 ? '0o' : '')));
+			$str = ($baseOut == 16 ? '0x' : ($baseOut == 2 ? '0b' : ($baseOut == 8 ? '0o' : ''))) . $str;
 		}
 
 		return $x->_s() < 0 ? '-'.$str : $str;
@@ -2217,6 +2288,16 @@ class DecimalHelper
 		return $_arr;
 	} 
 
+	public static function arrayCopy ( $arr ) : array
+	{
+		$_arr = [];
+
+		foreach ( $arr as $key => $value )
+		{ $_arr[$key] = $value; }
+
+		return $_arr;
+	}
+
 	/**
 	 * Multiplies all integers at $x array by $k adding $carry
 	 * and, after, normalize it to $base.
@@ -2310,8 +2391,8 @@ class DecimalHelper
 		for (; $al--;)
 		{
 			$a[$al] -= $i;
-			$i = $a[$al] < $b[$al] ? 1 : 0;
-			$a[$al] = $i * $base + $a[$al] - $b[$al];
+			$i = isset($a[$al], $b[$al]) && $a[$al] < $b[$al] ? 1 : 0;
+			$a[$al] = $i * $base + ($a[$al]??0) - ($b[$al]??0);
 		}
 
 		for(; !$a[0] && \count($a)-1; )

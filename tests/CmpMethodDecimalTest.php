@@ -5,56 +5,68 @@ use PHPUnit\Framework\TestCase;
 use Piggly\Decimal\Decimal;
 use Piggly\Decimal\DecimalConfig;
 
+/**
+ * @coversDefaultClass \Piggly\Decimal\Decimal
+ */
 class CmpMethodDecimalTest extends TestCase
 {
 	/**
-	 * Configuration
+	 * Setup Decimal configuration.
 	 *
-	 * @var DecimalConfig
+	 * @return void
 	 */
-	protected $_config;
-
 	protected function setUp () : void
 	{
-		$this->_config = DecimalConfig::clone([
-			'precision' => 40,
-			'rounding' => 4,
-			'toExpNeg' => -7,
-			'toExpPos' => 21,
-			'maxE' => 9e15,
-			'minE' => -9e15,
-			'crypto' => false,
-			'modulo' => 1
-		]);
+		DecimalConfig
+			::instance()
+			->set([
+				'precision' => 40,
+				'rounding' => 4,
+				'toExpNeg' => -7,
+				'toExpPos' => 21,
+				'maxE' => 9e15,
+				'minE' => -9e15,
+				'modulo' => 1
+			]);
 	}
 
 	/**
 	 * Assert if is matching the expected data.
 	 *
+	 * @covers ::cmp
+	 * @covers ::compareTo
+	 * @covers ::gt
+	 * @covers ::greaterThan
+	 * @covers ::gte
+	 * @covers ::greaterThanOrEqualTo
+	 * @covers ::lt
+	 * @covers ::lessThan
+	 * @covers ::lte
+	 * @covers ::lessThanOrEqualTo
 	 * @test Expecting positive assertion
-    * @dataProvider stringMatching
-	 * @param Decimal|integer|float|string $expected
-	 * @param Decimal|integer|float|string $n
-	 * @param bool $expected
+    * @dataProvider dataSetOne
+	 * @param Decimal|integer|float|string $a
+	 * @param Decimal|integer|float|string $b
+	 * @param int|float $expected
 	 * @return void
 	 */
-	public function testIsMatchingWithExpected (
+	public function testSetOne (
 		$a,
 		$b,
 		$expected 
 	)
 	{ 
-		if ( \is_NAN($expected) )
-		{ $this->assertEquals(\strval($expected), \strval((new Decimal($a, $this->_config))->cmp($b))); }
+		if ( \is_nan($expected) )
+		{ $this->assertEquals(\strval($expected), \strval((new Decimal($a))->cmp($b))); }
 		else
-		{ $this->assertEquals($expected, (new Decimal($a, $this->_config))->cmp($b)); }
+		{ $this->assertEquals($expected, (new Decimal($a))->cmp($b)); }
 	}
 	
 	/**
-	 * Provider for testIsMatchingWithExpected().
+	 * Provider for testSetOne().
 	 * @return array
 	 */
-	public function stringMatching() : array
+	public function dataSetOne() : array
 	{
 		return [
 			[1, 0, 1],

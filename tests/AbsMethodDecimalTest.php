@@ -5,71 +5,75 @@ use PHPUnit\Framework\TestCase;
 use Piggly\Decimal\Decimal;
 use Piggly\Decimal\DecimalConfig;
 
+/**
+ * @coversDefaultClass \Piggly\Decimal\Decimal
+ */
 class AbsMethodDecimalTest extends TestCase
 {
 	/**
-	 * Configuration
+	 * Setup Decimal configuration.
 	 *
-	 * @var DecimalConfig
+	 * @return void
 	 */
-	protected $_config;
-
 	protected function setUp () : void
 	{
-		$this->_config = DecimalConfig::clone([
-			'precision' => 40,
-			'rounding' => 4,
-			'toExpNeg' => -7,
-			'toExpPos' => 21,
-			'maxE' => 9e15,
-			'minE' => -9e15,
-			'crypto' => false,
-			'modulo' => 1
-		]);
+		DecimalConfig
+			::instance()
+			->set([
+				'precision' => 40,
+				'rounding' => 4,
+				'toExpNeg' => -7,
+				'toExpPos' => 21,
+				'maxE' => 9e15,
+				'minE' => -9e15,
+				'modulo' => 1
+			]);
 	}
 
 	/**
 	 * Assert if is matching the expected data.
 	 *
+	 * @covers ::abs
+	 * @covers ::absOf
+	 * @covers ::absoluteValue
 	 * @test Expecting positive assertion
-    * @dataProvider stringMatching
-	 * @param array $coefficient
-	 * @param integer $exponent
-	 * @param integer $sign
+    * @dataProvider dataSetOne
+	 * @param string $expected Expected data.
 	 * @param Decimal|integer|float|string $n
 	 * @return void
 	 */
-	public function testIsMatchingWithExpected (
+	public function testSetOne (
 		string $expected,
 		$n 
 	)
-	{ $this->assertEquals($expected, (new Decimal($n, $this->_config))->abs()->valueOf()); }
+	{ $this->assertEquals($expected, (new Decimal($n))->abs()->valueOf()); }
 
 	/**
 	 * Assert if is matching the expected data.
 	 *
+	 * @covers ::abs
+	 * @covers ::absOf
+	 * @covers ::absoluteValue
 	 * @test Expecting positive assertion
-    * @dataProvider stringMatchingExpZero
-	 * @param array $coefficient
-	 * @param integer $exponent
-	 * @param integer $sign
+    * @dataProvider dataSetTwo
+	 * @param string $expected Expected data.
 	 * @param Decimal|integer|float|string $n
 	 * @return void
 	 */
-	public function testIsExpZeroMatchingWithExpected (
+	public function testSetTwo (
 		string $expected,
 		$n 
 	)
 	{ 
-		$this->_config->toExpNeg = $this->_config->toExpPos = 0;
-		$this->assertEquals($expected, (new Decimal($n, $this->_config))->abs()->valueOf()); 
+		DecimalConfig::instance()->set(['toExpNeg' => 0, 'toExpPos' => 0]);
+		$this->assertEquals($expected, (new Decimal($n))->abs()->valueOf()); 
 	}
 	
 	/**
-	 * Provider for testIsMatchingWithExpected().
+	 * Provider for testSetOne().
 	 * @return array
 	 */
-	public function stringMatching() : array
+	public function dataSetOne() : array
 	{
 		return [
 			['0', 0],
@@ -134,10 +138,10 @@ class AbsMethodDecimalTest extends TestCase
 	}
 
 	/**
-	 * Provider for testIsExpZeroMatchingWithExpected().
+	 * Provider for testSetTwo().
 	 * @return array
 	 */
-	public function stringMatchingExpZero() : array
+	public function dataSetTwo() : array
 	{
 		return [
 			['5.2452468128e+1', '-5.2452468128e+1'],

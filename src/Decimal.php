@@ -1,6 +1,7 @@
 <?php
 namespace Piggly\Decimal;
 
+use ArrayObject;
 use RuntimeException;
 
 class Decimal
@@ -250,7 +251,7 @@ class Decimal
 	{ 
 		return DecimalHelper::finalise(
 			new Decimal($this, $this->_config), 
-			$this->_exponent + 1, 
+			$this->_exponent+1, 
 			DecimalConfig::ROUND_CEIL
 		); 
 	}
@@ -283,9 +284,9 @@ class Decimal
 	 *   NAN  if the value of either Decimal is NAN.
 	 *
 	 * @param Decimal|float|int|string $y
-	 * @return float
+	 * @return int|float
 	 */
-	public function comparedTo ( $y ) : float
+	public function comparedTo ( $y )
 	{
 		$x = $this;
 		$xd = $x->_digits;
@@ -296,9 +297,9 @@ class Decimal
 		$ys = $y->_sign;
 
 		// Either NaN or ±Infinity?
-		if ( \is_null($xd) || \is_null($yd) )
+		if ( $x->isNaN() || $y->isNaN() || !$x->isFinite() || !$y->isFinite() )
 		{ 
-			if ( \is_nan($xs) || \is_nan($ys) )
+			if ( $x->isNaN() || $y->isNaN() )
 			{ return \NAN; }
 
 			if ( $xs !== $ys )
@@ -314,7 +315,7 @@ class Decimal
 		}
 
 		// Either zero?
-		if ( !$xd[0] || !$yd[0] )
+		if ( $x->isZero() || $y->isZero() )
 		{ return $xd[0] ? $xs : ($yd[0] ? -$ys : 0); }
 
 		// Signs differ?
@@ -323,7 +324,7 @@ class Decimal
 
 		// Compare exponents
 		if ( $x->_exponent !== $y->_exponent )
-		{ return $x->_exponent > $y->_exponent ^ $xs < 0 ? 1 : -1; }
+		{ return ($x->_exponent > $y->_exponent) ^ ($xs < 0) ? 1 : -1; }
 
 		$xdC = \count($xd);
 		$ydC = \count($yd);
@@ -336,11 +337,10 @@ class Decimal
 			++$i
 		)
 		{
-			if ( $xd[$i] !== $yd[$i] ) 
+			if ( $xd[$i] != $yd[$i] ) 
 			{ return $xd[$i] > $yd[$i] ^ $xs < 0 ? 1 : -1; }
 		}
 
-		// Compare lengths
 		return $xdC === $ydC ? 0 : ( $xdC > $ydC ^ $xs < 0 ? 1 : -1 ); 
 	}
 
@@ -350,7 +350,7 @@ class Decimal
 	 * @see comparedTo()
 	 * @param Decimal|float|int|string $y
 	 * @since 1.0.0
-	 * @return float
+	 * @return int|float
 	 */
 	public function cmp ( $y )
 	{ return $this->comparedTo($y); }
@@ -393,12 +393,10 @@ class Decimal
 		$c->precision = $pr;
 		$c->rounding = $rm;
 
-		return DecimalHelper::finalise(
-			DecimalHelper::_quadrant() == 2 || DecimalHelper::_quadrant() == 3 ? $x->neg() : $x, 
-			$pr, 
-			$rm, 
-			true
-		);
+		$qua = DecimalHelper::_quadrant();
+		$x = DecimalHelper::_quadrant() == 2 || DecimalHelper::_quadrant() == 3 ? $x->neg() : $x;
+
+		return DecimalHelper::finalise($x, $pr, $rm, true);
 	}
 
 	/**
@@ -442,7 +440,7 @@ class Decimal
 	 */
 	public function cubeRoot () : Decimal
 	{
-
+		$m = false;
 		$x = $this;
 		$c = $x->_c();
 
@@ -453,7 +451,7 @@ class Decimal
 		DecimalHelper::external(false);
 
 		// Estimate cbrt
-		$s = \intval($x->_s() + \pow($x->_s() * $x->toNumber(), 1/3));
+		$s = $x->_s() * \pow($x->_s() * $x->toNumber(), 1/3);
 		
 		// Math.sqrt underflow/overflow?
 		// Pass x to Math.pow as integer, 
@@ -478,7 +476,7 @@ class Decimal
 			else 
 			{
 				$n = \strval(\exp($s));
-				$n = DecimalHelper::slice(0, \strpos($n, 'e')+1) + $e;
+				$n = \floatval(DecimalHelper::slice(0, \strpos($n, 'e')+1)) + $e;
 			}
 
 			$r = new Decimal($n, $c);
@@ -492,7 +490,7 @@ class Decimal
 
 		// Halley's method.
 		// TODO? Compare Newton's method.
-		for (;;)
+		while (true)
 		{
 			$t = $r;
 			$t3 = $t->times($t)->times($t);
@@ -574,12 +572,13 @@ class Decimal
 	{ return (new Decimal($x))->cbrt(); }
 
 	/**
-	 * Undocumented function
+	 * Return the number of decimal places 
+	 * of the value of this Decimal.
 	 *
 	 * @since 1.0.0
-	 * @return Decimal
+	 * @return int|float
 	 */
-	public function decimalPlaces () : Decimal
+	public function decimalPlaces ()
 	{
 		$digits = $this->_digits;
 		$number = \NAN;
@@ -590,11 +589,9 @@ class Decimal
 			$number = ($w - floor($this->_exponent / self::LOG_BASE)) * self::LOG_BASE;
 			$w = $digits[$w];
 
-			if ( isset($digits[$w]) )
+			if ( $w )
 			{
-				$w = $digits[$w];
-
-				for (; $w % 10 == 0; $w /= 1 )
+				for (; $w % 10 == 0; $w /= 10 )
 				{ $number--; }
 			}
 
@@ -610,9 +607,9 @@ class Decimal
 	 *
 	 * @see decimalPlaces()
 	 * @since 1.0.0
-	 * @return Decimal
+	 * @return int|float
 	 */
-	public function dp () : Decimal
+	public function dp ()
 	{ return $this->decimalPlaces(); }
 
 	/**
@@ -1032,12 +1029,11 @@ class Decimal
 		$c->precision = $pr+7;
 		$c->rounding = 1;
 
-		return DecimalHelper::finalise(
+		return DecimalHelper::divide(
 			$x->sinh(),
 			$x->cosh(), 
 			($c->precision = $pr), 
-			($c->rounding = $rm), 
-			true
+			($c->rounding = $rm)
 		);
 	}
 
@@ -1559,7 +1555,7 @@ class Decimal
 			$r = $t->plus($px->div(($n+=2)));
 
 			if ( isset($r->_d()[$j]) )
-			{ for ( $i = $j; $r->_d()[$i] == $t->_d()[$i] && $i--; ); }
+			{ for ( $i = $j; isset($t->_d()[$i]) && $r->_d()[$i] == $t->_d()[$i] && $i--; ); }
 		}
 
 		if ( $k )
@@ -1844,6 +1840,7 @@ class Decimal
 	 */
 	public function logarithm ( $base = null ) : Decimal
 	{
+		$inf = false;
 		$x = $this;
 		$c = $this->_c();
 		$pr = $c->precision;
@@ -1875,7 +1872,7 @@ class Decimal
 		{
 			$n = 0;
 
-			if ( !$x->isZero() )
+			if ( $x->isZero() )
 			{ $n = -\INF; }
 			else if ( $x->_s() !== 1 )
 			{ $n = \NAN; }
@@ -1905,9 +1902,7 @@ class Decimal
 
 		$sd = $pr+$guard;
 		$num = DecimalHelper::naturalLogarithm($x, $sd);
-		$denominator = $isBase10 
-			? DecimalHelper::getLn10($c, $sd + 10) 
-			: DecimalHelper::naturalLogarithm($base, $sd);
+		$denominator = $isBase10 ? DecimalHelper::getLn10($c, $sd + 10) : DecimalHelper::naturalLogarithm($base, $sd);
 
 		$r = DecimalHelper::divide($num, $denominator, $sd, 1);
 
@@ -2090,24 +2085,24 @@ class Decimal
 			return $x->plus($y);
 		}
 
-		$xd = $x->_d();
-		$yd = $x->_d();
+		$xd = $x->_digits;
+		$yd =& $y->_digits; // Any changes to $yd should applies to $y
 		$pr = $c->precision;
 		$rm = $c->rounding;
 
 		// If either is zero...
-		if ( empty($xd[0]) || empty($yd[0]) )
+		if ( $x->isZero() || $y->isZero() )
 		{
 			// Return y negated if x is zero and y is non-zero.
-			if ( !empty($yd[0]) )
-			{ $y->s(!$y->_s()); }
+			if ( !$y->isZero() )
+			{ $y->s(-$y->_s()); }
 			// Return x if y is zero and x is non-zero.
-			else if ( !empty($xd[0]) )
+			else if ( !$x->isZero() )
 			{ $y = new Decimal($x, $c); }
 			// Return zero if both are zero.
 			// From IEEE 754 (2008) 6.3: 0 - 0 = -0 - -0 = -0 when rounding to -Infinity.
 			else
-			{ return new Decimal($rm === 3 ? -0 : 0); }
+			{ return new Decimal($rm === 3 ? '-0' : 0); }
 
 			return DecimalHelper::isExternal() ? DecimalHelper::finalise($y, $pr, $rm) : $y;
 		}
@@ -2126,15 +2121,15 @@ class Decimal
 
 			if ( $xlty )
 			{
-				$d = $xd;
+				$d =& $xd;
 				$k = -$k;
 				$len = \count($yd);
 			}
 			else
 			{
-				$d = $yd;
+				$d =& $yd;
 				$e = $xe;
-				$len = \count($yd);
+				$len = \count($xd);
 			}
 			
 			// Numbers with massively different exponents 
@@ -2147,7 +2142,9 @@ class Decimal
 			if ( $k > $i )
 			{ 
 				$k = $i; 
-				$d = $d[0];
+
+				for ( $j = \count($d); $j > 1; $j-- )
+				{ \array_pop($d); }
 			}
 
 			// Prepend zeros to equalise exponents.
@@ -2173,8 +2170,11 @@ class Decimal
 
 			for ( $i = 0; $i < $len; $i++ )
 			{
-				if ( $xd[$i]??null !== $yd[$i]??null )
-				{ $xlty = $xd[$i] < $yd[$i]; }
+				if ( isset($xd[$i],$yd[$i]) && $xd[$i] !== $yd[$i] )
+				{ 
+					$xlty = $xd[$i] < $yd[$i]; 
+					break; 
+				}
 			}
 
 			$k = 0;
@@ -2182,10 +2182,10 @@ class Decimal
 
 		if ( $xlty )
 		{
-			$d = $xd;
-			$xd = $yd;
-			$yd = $d;
-			$y->s($y->_s());
+			$d =& $xd;
+			$xd =& $yd;
+			$yd =& $d;
+			$y->s(-$y->_s());
 		} 
 
 		$len = \count($xd);
@@ -2199,7 +2199,7 @@ class Decimal
 		// Subtract yd from xd.
 		for ( $i = \count($yd); $i > $k; )
 		{
-			if ( $xd[--$i] < $yd[$i] )
+			if ( isset($xd[--$i], $yd[$i]) && $xd[$i] < $yd[$i] )
 			{
 				for ( $j = $i; $j && $xd[--$j] === 0; )
 				{ $xd[$j] = static::BASE - 1; }
@@ -2212,15 +2212,15 @@ class Decimal
 		}
 
 		// Remove trailing zeros.
-		for ( ; $xd[--$len]??null === 0; )
+		for ( ; isset($xd[--$len]) && $xd[$len] === 0; )
 		{ \array_pop($xd); }
 
 		// Remove trailing zeros.
-		for ( ; $xd[0]??null === 0; \array_shift($xd) )
+		for ( ; isset($xd[0]) && $xd[0] == 0; \array_shift($xd) )
 		{ --$e; }
 
 		// Zero?
-		if ( $xd[0] === 0 )
+		if ( empty($xd[0]) )
 		{ return new Decimal($rm === 3 ? '-0' : 0, $c); }
 
 		$y->d($xd);
@@ -2419,7 +2419,7 @@ class Decimal
 	public function negated () : Decimal
 	{
 		$x = new Decimal($this, $this->_config);
-		$x->_sign = -$x->_sign;
+		$x->_sign = $x->_sign*-1;
 		return DecimalHelper::finalise($x);
 	}
 	
@@ -2487,8 +2487,8 @@ class Decimal
 			return $x->minus($y);
 		}
 
-		$xd = $x->_d();
-		$yd = $y->_d();
+		$xd = $x->_digits;
+		$yd =& $y->_digits;
 		$pr = $c->precision;
 		$rm = $c->rounding;
 
@@ -2498,7 +2498,7 @@ class Decimal
 			// Return x if y is zero.
 			// Return y if y is non-zero.
 			if ( $y->isZero() )
-			{ return new Decimal($x, $c); }
+			{ $y = new Decimal($x, $c); }
 
 			return DecimalHelper::isExternal() ? DecimalHelper::finalise($y, $pr, $rm) : $y;
 		}
@@ -2516,13 +2516,13 @@ class Decimal
 		{
 			if ( $i < 0 )
 			{
-				$d = $xd;
+				$d =& $xd;
 				$i = -$i;
 				$len = \count($yd);
 			}
 			else
 			{
-				$d = $yd;
+				$d =& $yd;
 				$e = $k;
 				$len = \count($xd);
 			}
@@ -2534,7 +2534,9 @@ class Decimal
 			if ( $i > $len )
 			{
 				$i = $len;
-				$d = [$d[0]];
+
+				for ( $j = \count($d); $j > 1; $j-- )
+				{ \array_pop($d); }
 			}
 			
 			// Prepend zeros to equalise exponents. 
@@ -2555,9 +2557,9 @@ class Decimal
 		if ( $len - $i < 0 )
 		{
 			$i = $len;
-			$d = $yd;
-			$yd = $xd;
-			$xd = $d;
+			$d =& $yd;
+			$yd =& $xd;
+			$xd =& $d;
 		}
 
 		// Only start adding at yd.length - 1 as the further 
@@ -2615,15 +2617,16 @@ class Decimal
 	 *
 	 * @param bool|int $z Whether to count integer-part trailing zeros: true, false, 1 or 0.
 	 * @since 1.0.0
-	 * @return int
+	 * @return int|float
 	 */
-	public function precision ( $z = false ) : int
+	public function precision ( $z = false )
 	{
 		$x = $this;
-		$z = (bool)$z;
 
-		if ( !\is_bool($z) )
+		if ( $z !== false && $z !== true && $z !== 1 && $z !== 0 )
 		{ throw new RuntimeException('Argument must be a bool or an integer 0 or 1 value.'); }
+
+		$z = (bool)$z;
 
 		if ( $x->isFinite() )
 		{
@@ -2644,9 +2647,9 @@ class Decimal
 	 * @param bool|int $z Whether to count integer-part trailing zeros: true, false, 1 or 0.
 	 * @see precision()
 	 * @since 1.0.0
-	 * @return int
+	 * @return int|float
 	 */
-	public function sd ( $z = false ) : int
+	public function sd ( $z = false )
 	{ return $this->precision($z); }
 
 	/**
@@ -2879,6 +2882,7 @@ class Decimal
 	 *  sqrt(0)  =  0
 	 *  sqrt(-0) = -0
 	 * 
+	 * @todo It need performance improvements, see at SqrtMethodDecimalTest class
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
@@ -2889,13 +2893,14 @@ class Decimal
 		$d = $x->_d();
 		$e = $x->_e();
 		$s = $x->_s();
+		$m = false;
 
 		// Negative/NaN/Infinity/zero?
 		if ( $x->isNeg() || $x->isNaN() || !$x->isFinite() || $x->isZero() )
 		{
 			$n = \INF;
 
-			if ( $x->isNeg() || $x->isNaN() )
+			if ( $x->isNaN() || ( $x->isNeg() && !$x->isZero() ) )
 			{ $n = \NAN; }
 			else if ( $x->isZero() )
 			{ $n = $x; }
@@ -2906,10 +2911,10 @@ class Decimal
 		DecimalHelper::external(false);
 
 		// Estimate sqrt
-		$s = \sqrt($x->toInt());
+		$s = \sqrt($x->toNumber());
 
-		// Math.sqrt underflow/overflow?
-		// Pass x to Math.sqrt as integer, 
+		// sqrt underflow/overflow?
+		// Pass x to sqrt as integer, 
 		// then adjust the exponent of the result.
 		if ( $s == 0 || $s == \INF )
 		{
@@ -2918,25 +2923,31 @@ class Decimal
 			if ( (\strlen($n)+$e) % 2 === 0 )
 			{ $n .= '0'; }
 
-			$s = \sqrt((int)$n);
+			// PHP does not support long integers
+			// should it use bcsqrt when infinity
+			$s = ($s == \INF) ? \bcsqrt($n) : 0;
 			$e = (int)\floor(($e+1)/2) - \intval($e < 0 || $e % 2);
 
+			// TODO? May never be infinity ??
 			if ( $s == \INF )
 			{ $n = '5e'.$e; }
 			else 
 			{
-				$n = \strval(\exp($s));
-				$n = DecimalHelper::slice(0, \strpos($n, 'e')+1) + $e;
+				$s = new Decimal($s, $c);
+				$n = $s->toExponential();
+				$n = (DecimalHelper::slice($n, 0, \strpos($n, 'e')+1)) . $e;
 			}
 
 			$r = new Decimal($n, $c);
 		}
+		else
+		{ $r = new Decimal(\strval($s), $c); }
 
 		$sd = ($e = $c->precision) + 3;
 		$rep = null;
 
 		// Newton-Raphson iteration.
-		for (;;)
+		while ( true )
 		{
 			$t = $r;
 			$r = $t->plus(DecimalHelper::divide($x, $t, $sd+2, 1))->times(0.5);
@@ -3114,23 +3125,46 @@ class Decimal
 	{
 		$x = $this;
 		$c = $this->_config;
-		$xd = $x->_d();
+		$xd = $x->_digits;
 		$y  = new Decimal($y, $c);
-		$yd = $y->_d();
+		$yd =& $y->_digits;
 
 		// Multiply signer
 		$y->s($y->_s()*$x->_s());
 
 		// If either is NaN, ±Infinity or ±0...
-		if ( !$x->isFinite() || $x->isNaN() || !$y->isFinite() || $y->isNaN() )
+		if ( 
+				!$x->isFinite() 
+				|| $x->isNaN() 
+				|| !$y->isFinite() 
+				|| $y->isNaN()
+				|| $x->isZero()
+				|| $y->isZero() )
 		{
-			// TODO @ FIX IT
-			return new Decimal(
-				!$y->signed() || (!empty($xd) && empty($yd)) || (!empty($yd) && empty($xd))
-				? \NAN
-				: (empty($xd) || empty($yd) ? 'INF' : 'INF' ), // TODO signal to infinity
-				$c 
-			);
+			$n = \NAN;
+
+			if ( $y->isNaN() 
+					|| $x->isNaN() 
+					|| ( $x->isZero() && !$y->isFinite() )
+					|| ( $y->isZero() && !$x->isFinite() )
+			)
+			{ $n = \NAN; }
+			else if ( !$y->isFinite() || !$x->isFinite() )
+			{
+				if ( $y->_s() > 0 )
+				{ $n = \INF; }
+				else if ( $y->_s() < 0 )
+				{ $n = -\INF; }
+			}
+			else 
+			{
+				if ( $y->_s() > 0 )
+				{ $n = 0; }
+				else if ( $y->_s() < 0 )
+				{ $n = '-0'; }
+			}
+
+			return new Decimal( $n, $c );
 		}
 
 		$e = (int)\floor($x->_e()/static::LOG_BASE) + (int)\floor($y->_e()/static::LOG_BASE);
@@ -3170,7 +3204,7 @@ class Decimal
 		}
 
 		// Remove trailing zeros
-		for (; !$r[--$rl]; )
+		for ( ; isset($r[--$rl]) && $r[$rl] === 0; )
 		{ \array_pop($r); }
 
 		if ($carry) 
@@ -3593,23 +3627,37 @@ class Decimal
 
 	/**
 	 * Decimal object to integer.
+	 * Must check php limits to convert to
+	 * INF.
 	 *
 	 * @todo Experimental
 	 * @since 1.0.0
-	 * @return int
+	 * @return int|float INTEGER or FLOAT when INF.
 	 */
-	public function toInt () : int
-	{ return \intval($this->toString()); }
+	public function toInt ()
+	{ 
+		if ( $this->_s() > 0 )
+		{ return $this->greaterThan(\PHP_INT_MAX) ? \INF : \intval($this->toString()); }
+
+		return $this->greaterThan(\PHP_INT_MIN) ? \intval($this->toString()) : \INF; 
+	}
 
 	/**
 	 * Decimal object to float.
+	 * Must check php limits to convert to
+	 * INF.
 	 *
 	 * @todo Experimental
 	 * @since 1.0.0
 	 * @return float
 	 */
 	public function toFloat () : float
-	{ return \floatval($this->toString()); }
+	{ 
+		if ( $this->_s() > 0 )
+		{ return $this->greaterThan(\PHP_FLOAT_MAX) ? \INF : \floatval($this->toString()); }
+		
+		return $this->greaterThan(-\PHP_FLOAT_MAX) ? \floatval($this->toString()) : \INF; 
+	}
 
 	/**
 	 * Decimal object to number.
@@ -3620,6 +3668,11 @@ class Decimal
 	 */
 	public function toNumber ()
 	{ 
+		if ( $this->isNaN() )
+		{ return \NAN; }
+		else if ( !$this->isFinite() )
+		{ return $this->_sign < 0 ? -\INF : \INF; }
+
 		if ( !$this->isInt() )
 		{ return $this->toFloat(); }
 
