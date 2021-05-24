@@ -88,12 +88,8 @@ class Decimal
 	 */
 	const MAX_SAFE_INTEGER = \PHP_INT_MAX;
 
-	// const LN10_PRECISION = (strlen(DecimalConfig::LN10) - 1);
-	// const PI_PRECISION = (strlen(DecimalConfig::PI) - 1);
-	const LN10_PRECISION = 1025;
-	const PI_PRECISION = 1025;
-
 	/**
+	 * The decimal digits.
 	 * An array of integers,
 	 * each between 0 - 1e7
 	 * or null.
@@ -104,6 +100,7 @@ class Decimal
 	protected $_digits;
 
 	/**
+	 * The decimal expoent.
 	 * An integer between -9e15
 	 * to 9e15 or NaN.
 	 *
@@ -113,6 +110,7 @@ class Decimal
 	protected $_exponent;
 
 	/**
+	 * The decimal sign.
 	 * An integer limited to -1,
 	 * 1 or NaN.
 	 *
@@ -123,6 +121,8 @@ class Decimal
 
 	/**
 	 * Decimal configuration.
+	 * By default, will be global
+	 * instance.
 	 *
 	 * @var DecimalConfig
 	 * @since 1.0.0
@@ -346,7 +346,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function clone ( $x ) : Decimal
-	{ return new Decimal($x, $x->_c()); }
+	{ return new Decimal($x, $x->_c); }
 
 	/**
 	 * Return
@@ -446,7 +446,7 @@ class Decimal
 	public function cosine () : Decimal
 	{
 		$x = $this;
-		$c = $this->_c();
+		$c = $this->_c;
 
 		if ( !$x->isFinite() )
 		{ return new Decimal(\NAN, $c); }
@@ -457,7 +457,7 @@ class Decimal
 
 		$pr = $c->precision;
 		$rm = $c->rounding;
-		$c->precision = $pr+(int)\max($x->_e(), $x->sd()) + static::LOG_BASE;
+		$c->precision = $pr+(int)\max($x->_e, $x->sd()) + static::LOG_BASE;
 		$c->rounding = 1;
 
 		$x = static::__cosine($c, static::__toLessThanHalfPi($c, $x));
@@ -512,7 +512,7 @@ class Decimal
 	{
 		$m = false;
 		$x = $this;
-		$c = $x->_c();
+		$c = $x->_c;
 
 		// NaN/Infinity/zero?
 		if ( !$x->isFinite() || $x->isZero() )
@@ -521,15 +521,15 @@ class Decimal
 		static::$_external = false;
 
 		// Estimate cbrt
-		$s = $x->_s() * \pow($x->_s() * $x->toNumber(), 1/3);
+		$s = $x->_s * \pow($x->_s * $x->toNumber(), 1/3);
 		
 		// Math.sqrt underflow/overflow?
 		// Pass x to Math.pow as integer, 
 		// then adjust the exponent of the result.
 		if ( $s == 0 || \abs($s) == \INF )
 		{
-			$n = Math::digitsToStr($x->_d());
-			$e = $x->_e();
+			$n = Math::digitsToStr($x->_d);
+			$e = $x->_e;
 
 			// Adjust n exponent so it is a multiple 
 			// of 3 away from x exponent.
@@ -550,7 +550,7 @@ class Decimal
 			}
 
 			$r = new Decimal($n, $c);
-			$r->s($x->_s());
+			$r->s($x->_s);
 		}
 		else
 		{ $r = new Decimal((string)$s); }
@@ -569,8 +569,8 @@ class Decimal
 
 			// TODO? Replace with for-loop and checkRoundingDigits.
 			if (
-				Utils::sliceStr(Math::digitsToStr($t->_d()), 0, $sd)
-				=== ($n = Utils::sliceStr(Math::digitsToStr($r->_d()), 0, $sd))
+				Utils::sliceStr(Math::digitsToStr($t->_d), 0, $sd)
+				=== ($n = Utils::sliceStr(Math::digitsToStr($r->_d), 0, $sd))
 			)
 			{
 				$n = Utils::sliceStr($n, $sd-3, $sd+1);
@@ -877,7 +877,7 @@ class Decimal
 	public function hyperbolicCosine () : Decimal
 	{
 		$x = $this;
-		$c = $this->_c();
+		$c = $this->_c;
 
 		if ( !$x->isFinite() )
 		{ return new Decimal($x->isNaN() ? \NAN : \INF, $c); }
@@ -888,9 +888,9 @@ class Decimal
 
 		$pr = $c->precision;
 		$rm = $c->rounding;
-		$c->precision = $pr+(int)\max($x->_e(), $x->sd()) + 4;
+		$c->precision = $pr+(int)\max($x->_e, $x->sd()) + 4;
 		$c->rounding = 1;
-		$len = \count($x->_d());
+		$len = \count($x->_d);
 
 		// Argument reduction: cos(4x) = 1 - 8cos^2(x) + 8cos^4(x) + 1
 		// i.e. cos(x) = 1 - cos^2(x/4)(8 - 8cos^2(x/4))
@@ -989,16 +989,16 @@ class Decimal
 	public function hyperbolicSine ()
 	{
 		$x = $this;
-		$c = $this->_c();
+		$c = $this->_c;
 
 		if ( !$x->isFinite() || $x->isZero() )
 		{ return new Decimal($x, $c); }
 
 		$pr = $c->precision;
 		$rm = $c->rounding;
-		$c->precision = $pr+(int)\max($x->_e(), $x->sd()) + 4;
+		$c->precision = $pr+(int)\max($x->_e, $x->sd()) + 4;
 		$c->rounding = 1;
-		$len = \count($x->_d());
+		$len = \count($x->_d);
 
 		if ( $len < 3 )
 		{ $x = static::__taylorSeries($c, 2, $x, $x, true); }
@@ -1085,10 +1085,10 @@ class Decimal
 	public function hyperbolicTangent ()
 	{
 		$x = $this;
-		$c = $this->_c();
+		$c = $this->_c;
 
 		if ( !$x->isFinite() )
-		{ return new Decimal($x->_s(), $c); }
+		{ return new Decimal($x->_s, $c); }
 
 		if ( $x->isZero() )
 		{ return new Decimal($x, $c); }
@@ -1195,7 +1195,7 @@ class Decimal
 	public function inverseCosine ()
 	{
 		$x = $this;
-		$c = $this->_c();
+		$c = $this->_c;
 		$k = $x->abs()->cmp(1);
 		$pr = $c->precision;
 		$rm = $c->rounding;
@@ -1280,7 +1280,7 @@ class Decimal
 	public function inverseHyperbolicCosine () : Decimal
 	{
 		$x = $this;
-		$c = $this->_c();
+		$c = $this->_c;
 
 		if ( $x->lte(1) )
 		{ return new Decimal($x->eq(1) ? 0 : \NAN, $c); }
@@ -1290,7 +1290,7 @@ class Decimal
 
 		$pr = $c->precision;
 		$rm = $c->rounding;
-		$c->precision = $pr+(int)\max((int)\abs($x->_e()), $x->sd()) + 4;
+		$c->precision = $pr+(int)\max((int)\abs($x->_e), $x->sd()) + 4;
 		$c->rounding = 1;
 
 		static::$_external = false;
@@ -1346,14 +1346,14 @@ class Decimal
 	public function inverseHyperbolicSine () : Decimal
 	{
 		$x = $this;
-		$c = $this->_c();
+		$c = $this->_c;
 
 		if ( !$x->isFinite() || $x->isZero() )
 		{ return new Decimal($x, $c); }
 
 		$pr = $c->precision;
 		$rm = $c->rounding;
-		$c->precision = $pr+2*(int)\max((int)\abs($x->_e()), $x->sd()) + 6;
+		$c->precision = $pr+2*(int)\max((int)\abs($x->_e), $x->sd()) + 6;
 		$c->rounding = 1;
 
 		static::$_external = false;
@@ -1413,12 +1413,12 @@ class Decimal
 	public function inverseHyperbolicTangent () : Decimal
 	{
 		$x = $this;
-		$c = $this->_c();
+		$c = $this->_c;
 
 		if ( !$x->isFinite() )
 		{ return new Decimal(\NAN, $c); }
 
-		if ( $x->_e() >= 0 )
+		if ( $x->_e >= 0 )
 		{
 			$n = 0;
 			
@@ -1437,10 +1437,10 @@ class Decimal
 
 		$xsd = $x->sd();
 
-		if ( (int)\max($xsd, $pr) < 2 * -$x->_e() - 1 )
+		if ( (int)\max($xsd, $pr) < 2 * -$x->_e - 1 )
 		{ return static::finalise(new Decimal($x, $c), $pr, $rm, true); }
 
-		$c->precision = $wpr = $xsd - $x->_e();
+		$c->precision = $wpr = $xsd - $x->_e;
 		$x = static::__divide($x->plus(1), (new Decimal(1, $c))->minus($x), $wpr + $pr, 1);
 
 		$c->precision = $pr + 4;
@@ -1486,7 +1486,7 @@ class Decimal
 	public function inverseSine () : Decimal
 	{
 		$x = $this;
-		$c = $this->_c();
+		$c = $this->_c;
 
 		if ( $x->isZero() )
 		{ return new Decimal($x, $c); }
@@ -1501,7 +1501,7 @@ class Decimal
 			if ( $k === 0 )
 			{ 
 				$halfPi = static::__getPi($c, $pr+4, $rm)->times(0.5);
-				$halfPi->s($x->_s());
+				$halfPi->s($x->_s);
 				return $halfPi;
 			}
 
@@ -1567,7 +1567,7 @@ class Decimal
 	public function inverseTangent () : Decimal
 	{
 		$x = $this;
-		$c = $this->_c();
+		$c = $this->_c;
 		$pr = $c->precision;
 		$rm = $c->rounding;
 
@@ -1576,19 +1576,19 @@ class Decimal
 			if ( $x->isNaN() )
 			{ return new Decimal(\NAN, $c); }
 
-			if ( $pr + 4 <= static::PI_PRECISION )
+			if ( $pr + 4 <= DecimalConfig::PI_PRECISION )
 			{
 				$r = static::__getPi($c, $pr+4, $rm)->times(0.5);
-				$r->s($x->_s());
+				$r->s($x->_s);
 				return $r;
 			}
 		}
 		else if ( $x->isZero() )
 		{ return new Decimal($x, $c); }
-		else if ( $x->abs()->eq(1) && $pr+4 <= static::PI_PRECISION )
+		else if ( $x->abs()->eq(1) && $pr+4 <= DecimalConfig::PI_PRECISION )
 		{
 			$r = static::__getPi($c, $pr+4, $rm)->times(0.25);
-			$r->s($x->_s());
+			$r->s($x->_s);
 			return $r;
 		}
 		
@@ -1623,8 +1623,8 @@ class Decimal
 			$px = $px->times($x2);
 			$r = $t->plus($px->div(($n+=2)));
 
-			if ( isset($r->_d()[$j]) )
-			{ for ( $i = $j; isset($t->_d()[$i]) && $r->_d()[$i] == $t->_d()[$i] && $i--; ); }
+			if ( isset($r->_d[$j]) )
+			{ for ( $i = $j; isset($t->_d[$i]) && $r->_d[$i] == $t->_d[$i] && $i--; ); }
 		}
 
 		if ( $k )
@@ -1705,19 +1705,19 @@ class Decimal
 		else if ( !$y->isFinite() && !$x->isFinite() )
 		{
 			$r = static::__getPi($c, $wpr, 1)->times($x->isPos() ? 0.25 : 0.75);
-			$r->s($y->_s());
+			$r->s($y->_s);
 		}
 		// x is ±Infinity or y is ±0
 		else if ( !$x->isFinite() || $y->isZero() )
 		{
-			$r = $x->_s() < 0 ? static::__getPi($c, $pr, $rm) : new Decimal(0, $c);
-			$r->s($y->_s());
+			$r = $x->_s < 0 ? static::__getPi($c, $pr, $rm) : new Decimal(0, $c);
+			$r->s($y->_s);
 		}
 		// y is ±Infinity or x is ±0
 		else if ( !$y->isFinite() || $x->isZero() )
 		{
 			$r = static::__getPi($c, $wpr, 1)->times(0.5);
-			$r->s($y->_s());
+			$r->s($y->_s);
 		}
 		// Both non-zero and finite
 		// x is neg
@@ -1911,7 +1911,7 @@ class Decimal
 	{
 		$inf = false;
 		$x = $this;
-		$c = $this->_c();
+		$c = $this->_c;
 		$pr = $c->precision;
 		$rm = $c->rounding;
 		$guard = 5;
@@ -1925,7 +1925,7 @@ class Decimal
 		else
 		{
 			$base = new Decimal($base);
-			$d = $base->_d();
+			$d = $base->_d;
 
 			if ( $base->isNeg() || $base->isZero() || !$base->isFinite() || $base->eq(1) )
 			{ return new Decimal(\NAN,$c); }
@@ -1933,7 +1933,7 @@ class Decimal
 			$isBase10 = $base->eq(10);
 		}
 
-		$d = $x->_d();
+		$d = $x->_d;
 
 		// Is arg negative, non-finite, 0 or 1?
 		// TODO? May up this if to before "base if"
@@ -1943,7 +1943,7 @@ class Decimal
 
 			if ( $x->isZero() )
 			{ $n = -\INF; }
-			else if ( $x->_s() !== 1 )
+			else if ( $x->_s !== 1 )
 			{ $n = \NAN; }
 			else if ( !$x->isFinite() )
 			{ $n = \INF; }
@@ -1991,7 +1991,7 @@ class Decimal
 		// immediately after the requested decimal place, so the exact result
 		// would be assumed to be 2.6, which rounded using ROUND_CEIL to 1 decimal
 		// place is still 2.6.
-		if ( Math::checkRoundingDigits($r->_d(), ($k = $pr), $rm) )
+		if ( Math::checkRoundingDigits($r->_d, ($k = $pr), $rm) )
 		{
 			do
 			{
@@ -2007,13 +2007,13 @@ class Decimal
 				{
 					// Check for 14 nines from the 2nd rounding
 					// digit, as the first may be 4.
-					if ( \intval(Utils::sliceStr(Math::digitsToStr($r->_d()), $k+1, $k+15)) + 1 == 1e14 )
+					if ( \intval(Utils::sliceStr(Math::digitsToStr($r->_d), $k+1, $k+15)) + 1 == 1e14 )
 					{ $r = static::finalise($r, $pr+1, 0); }
 
 					break;
 				}
 			}
-			while (Math::checkRoundingDigits($r->_d(), ($k += 10), $rm));
+			while (Math::checkRoundingDigits($r->_d, ($k += 10), $rm));
 		}
 
 		static::$_external = true;
@@ -2137,20 +2137,20 @@ class Decimal
 			{ return new Decimal(\NAN, $c); }
 			// Return y negated if x is finite and y is ±Infinity.
 			else if ( $x->isFinite() )
-			{ $y->s(-$y->_s()); }
+			{ $y->s(-$y->_s); }
 			// Return x if y is finite and x is ±Infinity.
 			// Return x if both are ±Infinity with different signs.
 			// Return NaN if both are ±Infinity with the same sign.
 			else
-			{ $y = new Decimal( $y->isFinite() || $x->_s() !== $y->_s() ? $x : \NAN, $c ); }
+			{ $y = new Decimal( $y->isFinite() || $x->_s !== $y->_s ? $x : \NAN, $c ); }
 
 			return $y;
 		}
 
 		// If signs differ...
-		if ( $x->_s() != $y->_s() ) 
+		if ( $x->_s != $y->_s ) 
 		{
-			$y->s(-$y->_s());
+			$y->s(-$y->_s);
 			return $x->plus($y);
 		}
 
@@ -2164,7 +2164,7 @@ class Decimal
 		{
 			// Return y negated if x is zero and y is non-zero.
 			if ( !$y->isZero() )
-			{ $y->s(-$y->_s()); }
+			{ $y->s(-$y->_s); }
 			// Return x if y is zero and x is non-zero.
 			else if ( !$x->isZero() )
 			{ $y = new Decimal($x, $c); }
@@ -2179,8 +2179,8 @@ class Decimal
 		// x and y are finite, non-zero numbers with the same sign.
 	
 		// Calculate base 1e7 exponents.
-		$e = (int)\floor($y->_e()/static::LOG_BASE);
-		$xe = (int)\floor($x->_e()/static::LOG_BASE);
+		$e = (int)\floor($y->_e/static::LOG_BASE);
+		$xe = (int)\floor($x->_e/static::LOG_BASE);
 		$k = $xe - $e;
 
 		// If base 1e7 exponents differ...
@@ -2254,7 +2254,7 @@ class Decimal
 			$d =& $xd;
 			$xd =& $yd;
 			$yd =& $d;
-			$y->s(-$y->_s());
+			$y->s(-$y->_s);
 		} 
 
 		$len = \count($xd);
@@ -2372,7 +2372,7 @@ class Decimal
 			// Euclidian division: q = sign(y) * floor(x / abs(y))
 			// result = x - q * y    where  0 <= result < abs(y)
 			$q = static::__divide($x, $y->abs(), 0, 3, 1);
-			$q->s($q->_s()*$y->_s());
+			$q->s($q->_s*$y->_s);
 		}
 		else
 		{ $q = static::__divide($x, $y, 0, $c->modulo, 1); }
@@ -2530,7 +2530,7 @@ class Decimal
 	public function plus ( $y )
 	{
 		$x = $this;
-		$c = $this->_c();
+		$c = $this->_c;
 		$y = new Decimal($y, $c);
 
 		// If either is not finite...
@@ -2544,15 +2544,15 @@ class Decimal
 			// Return NaN if both are ±Infinity with different signs.
 			// Return y if x is finite and y is ±Infinity.
 			else if ( !$x->isFinite() )
-			{ $y = new Decimal($y->isFinite() || $x->_s() === $y->_s() ? $x : \NAN, $c); }
+			{ $y = new Decimal($y->isFinite() || $x->_s === $y->_s ? $x : \NAN, $c); }
 
 			return $y;
 		}
 
 		// If signs differ...
-		if ( $x->_s() !== $y->_s() )
+		if ( $x->_s !== $y->_s )
 		{
-			$y->s(-$y->_s());
+			$y->s(-$y->_s);
 			return $x->minus($y);
 		}
 
@@ -2575,8 +2575,8 @@ class Decimal
 		// x and y are finite, non-zero numbers with the same sign.
 	
 		// Calculate base 1e7 exponents.
-		$k = (int)\floor($x->_e()/static::LOG_BASE);
-		$e = (int)\floor($y->_e()/static::LOG_BASE);
+		$k = (int)\floor($x->_e/static::LOG_BASE);
+		$e = (int)\floor($y->_e/static::LOG_BASE);
 
 		$i = $k-$e;
 
@@ -2699,10 +2699,10 @@ class Decimal
 
 		if ( $x->isFinite() )
 		{
-			$k = Math::getPrecision($x->_d());
+			$k = Math::getPrecision($x->_d);
 
-			if ( $z && $x->_e() + 1 > $k )
-			{ $k = $x->_e() + 1; }
+			if ( $z && $x->_e + 1 > $k )
+			{ $k = $x->_e + 1; }
 		}
 		else
 		{ $k = \NAN; }
@@ -2861,12 +2861,12 @@ class Decimal
 		if ( $x->isFinite() )
 		{
 			if ( !$x->isZero() )
-			{ return $x->_s(); }
+			{ return $x->_s; }
 			else 
-			{ return $x->_s() < 0 ? -0.0 : 0; }
+			{ return $x->_s < 0 ? -0.0 : 0; }
 		}
 		
-		return $x->_s() ?? \NAN;
+		return $x->_s ?? \NAN;
 	}
 
 	/**
@@ -2890,7 +2890,7 @@ class Decimal
 	public function sine ()
 	{
 		$x = $this;
-		$c = $this->_c();
+		$c = $this->_c;
 
 		if ( !$x->isFinite() )
 		{ return new Decimal(\NAN, $c); }
@@ -2900,7 +2900,7 @@ class Decimal
 
 		$pr = $c->precision;
 		$rm = $c->rounding;
-		$c->precision = $pr+(int)\max($x->_e(), $x->sd()) + static::LOG_BASE;
+		$c->precision = $pr+(int)\max($x->_e, $x->sd()) + static::LOG_BASE;
 		$c->rounding = 1;
 
 		$x = static::__sine($c, static::__toLessThanHalfPi($c, $x));
@@ -2957,10 +2957,10 @@ class Decimal
 	public function squareRoot ()
 	{
 		$x = $this;
-		$c = $x->_c();
-		$d = $x->_d();
-		$e = $x->_e();
-		$s = $x->_s();
+		$c = $x->_c;
+		$d = $x->_d;
+		$e = $x->_e;
+		$s = $x->_s;
 		$m = false;
 
 		// Negative/NaN/Infinity/zero?
@@ -3029,8 +3029,8 @@ class Decimal
 
 			// TODO? Replace with for-loop and checkRoundingDigits.
 			if (
-				Utils::sliceStr(Math::digitsToStr($t->_d()), 0, $sd)
-				=== ($n = Utils::sliceStr(Math::digitsToStr($r->_d()), 0, $sd))
+				Utils::sliceStr(Math::digitsToStr($t->_d), 0, $sd)
+				=== ($n = Utils::sliceStr(Math::digitsToStr($r->_d), 0, $sd))
 			)
 			{
 				$n = Utils::sliceStr($n, $sd-3, $sd+1);
@@ -3121,7 +3121,7 @@ class Decimal
 	public function tangent ()
 	{
 		$x = $this;
-		$c = $this->_c();
+		$c = $this->_c;
 
 		if ( !$x->isFinite() )
 		{ return new Decimal(\NAN, $c); }
@@ -3205,7 +3205,7 @@ class Decimal
 		$yd =& $y->_digits;
 
 		// Multiply signer
-		$y->s($y->_s()*$x->_s());
+		$y->s($y->_s*$x->_s);
 
 		// If either is NaN, ±Infinity or ±0...
 		if ( 
@@ -3226,23 +3226,23 @@ class Decimal
 			{ $n = \NAN; }
 			else if ( !$y->isFinite() || !$x->isFinite() )
 			{
-				if ( $y->_s() > 0 )
+				if ( $y->_s > 0 )
 				{ $n = \INF; }
-				else if ( $y->_s() < 0 )
+				else if ( $y->_s < 0 )
 				{ $n = -\INF; }
 			}
 			else 
 			{
-				if ( $y->_s() > 0 )
+				if ( $y->_s > 0 )
 				{ $n = 0; }
-				else if ( $y->_s() < 0 )
+				else if ( $y->_s < 0 )
 				{ $n = '-0'; }
 			}
 
 			return new Decimal( $n, $c );
 		}
 
-		$e = (int)\floor($x->_e()/static::LOG_BASE) + (int)\floor($y->_e()/static::LOG_BASE);
+		$e = (int)\floor($x->_e/static::LOG_BASE) + (int)\floor($y->_e/static::LOG_BASE);
 		$xdl = \count($xd);
 		$ydl = \count($yd);
 
@@ -3376,7 +3376,7 @@ class Decimal
 		else
 		{ Math::isInt32($rm, 0, 8); }
 
-		return static::finalise($x, $dp + $x->_e() + 1, $rm);
+		return static::finalise($x, $dp + $x->_e + 1, $rm);
 	}
 
 	/**
@@ -3470,8 +3470,8 @@ class Decimal
 			else
 			{ Math::isInt32($rm, 0, 8); }
 
-			$y = static::finalise(new Decimal($x, $c), $dp + $x->_e() + 1, $rm);
-			$str = static::__finiteToString($y, false, $dp + $y->_e() + 1);
+			$y = static::finalise(new Decimal($x, $c), $dp + $x->_e + 1, $rm);
+			$str = static::__finiteToString($y, false, $dp + $y->_e + 1);
 		}
 		
 		// To determine whether to add the minus 
@@ -3499,7 +3499,7 @@ class Decimal
 	public function toFraction ( $maxD = null )
 	{
 		$x = $this;
-		$xd = $this->_d();
+		$xd = $this->_d;
 		$c = $this->_config;
 
 		if ( empty($xd) )
@@ -3511,10 +3511,10 @@ class Decimal
 		$n0 = new Decimal(0, $c);
 
 		$d = new Decimal($d1, $c);
-		$e = Math::getPrecision($xd) - $x->_e() - 1; $d->e($e);
+		$e = Math::getPrecision($xd) - $x->_e - 1; $d->e($e);
 		$k = $e % static::LOG_BASE;
 
-		$dd = $d->_d();
+		$dd = $d->_d;
 		$dd[0] = \pow(10, $k < 0 ? static::LOG_BASE + $k : $k);
 		$d->d($dd);
 
@@ -3560,7 +3560,7 @@ class Decimal
 		$d2 = static::__divide($maxD->minus($d0), $d1, 0, 1, 1);
 		$n0 = $n0->plus($d2->times($n1));
 		$d0 = $d0->plus($d2->times($d1));
-		$n0->s($x->_s()); $n1->s($x->_s());
+		$n0->s($x->_s); $n1->s($x->_s);
 
 		$__div = static::__divide($n1, $d1, $e, 1);
 
@@ -3620,7 +3620,7 @@ class Decimal
 		$x = $this;
 		$c = $this->_config;
 
-		$str = static::__finiteToString($x, $x->_e() <= $c->toExpNeg || $x->_e() >= $c->toExpPos);
+		$str = static::__finiteToString($x, $x->_e <= $c->toExpNeg || $x->_e >= $c->toExpPos);
 		return $x->isNeg() ? '-'.$str : $str;
 	}
 
@@ -3651,7 +3651,7 @@ class Decimal
 	) : Decimal
 	{
 		$x = $this;
-		$c = $this->_c();
+		$c = $this->_c;
 
 		$x = new Decimal($x, $c);
 
@@ -3683,7 +3683,7 @@ class Decimal
 			if ( !$y->isFinite() )
 			{
 				if ( !$y->isNaN() )
-				{ $y->s($x->_s()); }
+				{ $y->s($x->_s); }
 
 				return $y;
 			}
@@ -3700,7 +3700,7 @@ class Decimal
 		// If y is zero, return zero with the sign of x.
 		else
 		{
-			$y->s($x->_s());
+			$y->s($x->_s);
 			$x = $y;
 		}
 
@@ -3718,7 +3718,7 @@ class Decimal
 	 */
 	public function toInt ()
 	{ 
-		if ( $this->_s() > 0 )
+		if ( $this->_s > 0 )
 		{ return $this->greaterThan(\PHP_INT_MAX) ? \INF : \intval($this->toString()); }
 
 		return $this->greaterThan(\PHP_INT_MIN) ? \intval($this->toString()) : \INF; 
@@ -3735,7 +3735,7 @@ class Decimal
 	 */
 	public function toFloat () : float
 	{ 
-		if ( $this->_s() > 0 )
+		if ( $this->_s > 0 )
 		{ return $this->greaterThan(\PHP_FLOAT_MAX) ? \INF : \floatval($this->toString()); }
 		
 		return $this->greaterThan(-\PHP_FLOAT_MAX) ? \floatval($this->toString()) : \INF; 
@@ -3792,7 +3792,7 @@ class Decimal
 	public function toPower ( $y )
 	{
 		$x = $this;
-		$c = $this->_c();
+		$c = $this->_c;
 		$y = new Decimal($y, $c);
 		$yn = $y->toNumber();
 
@@ -3812,35 +3812,35 @@ class Decimal
 		{ return static::finalise($x, $pr, $rm); }
 
 		// y exponent
-		$e = \intval(\floor($y->_e()/static::LOG_BASE));
+		$e = \intval(\floor($y->_e/static::LOG_BASE));
 
 		// If y is a small integer use the 
 		// 'exponentiation by squaring' algorithm.
 		if ( 
-			$e >= (\count($y->_d()) - 1) && 
+			$e >= (\count($y->_d) - 1) && 
 			($k = ($yn < 0 ? -$yn : $yn)) <= static::MAX_SAFE_INTEGER
 		)
 		{
 			$r = static::__intPow($c, $x, $k, $pr);
-			return $y->_s() < 0 ? (new Decimal(1,$c))->div($r) : static::finalise($r, $pr, $rm);
+			return $y->_s < 0 ? (new Decimal(1,$c))->div($r) : static::finalise($r, $pr, $rm);
 		}
 
-		$s = $x->_s();
+		$s = $x->_s;
 
 		// if x is negative
 		if ( $s < 0 )
 		{
 			// if y is not an integer
-			if ($e < \count($y->_d()) - 1)
+			if ($e < \count($y->_d) - 1)
 			{ return new Decimal(\NAN); }
 
 			// Result is positive if x is negative and the 
 			// last digit of integer y is even.
-			if ( (($y->_d()[$e]??0) & 1) == 0 )
+			if ( (($y->_d[$e]??0) & 1) == 0 )
 			{ $s = 1; } 
 
 			// if x.eq(-1)
-			if ( $x->_e() == 0 && $x->_d()[0] == 1 && \count($x->_d()) == 1 )
+			if ( $x->_e == 0 && $x->_d[0] == 1 && \count($x->_d) == 1 )
 			{
 				$x->s($s);
 				return $x;
@@ -3854,8 +3854,8 @@ class Decimal
 		$k = \pow($x->toNumber(), $yn);
 		$e = 
 				$k == 0 || $k == \INF
-				? (int)\floor($yn * (\log(\floatval('0.'.Math::digitsToStr($x->_d()))) / \M_LN10 + $x->_e() + 1))
-				: (new Decimal($k.''))->_e();
+				? (int)\floor($yn * (\log(\floatval('0.'.Math::digitsToStr($x->_d))) / \M_LN10 + $x->_e + 1))
+				: (new Decimal($k.''))->_e;
 
 		// Exponent estimate may be incorrect 
 		// e.g. x: 0.999999999999999999, y: 2.29, e: 0, r.e: -1.
@@ -3900,7 +3900,7 @@ class Decimal
 			// If the rounding digits are [49]9999 or [50]0000
 			// increase the precision by 10 and recalculate
 			// the result.
-			if ( Math::checkRoundingDigits($r->_d(), $pr, $rm) )
+			if ( Math::checkRoundingDigits($r->_d, $pr, $rm) )
 			{
 				$e = $pr+10;
 
@@ -3914,7 +3914,7 @@ class Decimal
 
 				// Check for 14 nines from the 2nd rounding digit
 				// (the first rounding digit may be 4 or 9).
-				if ( \intval(Utils::sliceStr(Math::digitsToStr($r->_d()), $pr+1, $pr+15)) + 1 == 1e14 )
+				if ( \intval(Utils::sliceStr(Math::digitsToStr($r->_d), $pr+1, $pr+15)) + 1 == 1e14 )
 				{ $r = static::finalise($r, $pr + 1, 0); }
 			}
 		}
@@ -3977,7 +3977,7 @@ class Decimal
 		$c = $this->_config;
 
 		if ( \is_null($sd) )
-		{ $str = static::__finiteToString($x, $x->_e() <= $c->toExpNeg || $x->_e() >= $c->toExpPos); }
+		{ $str = static::__finiteToString($x, $x->_e <= $c->toExpNeg || $x->_e >= $c->toExpPos); }
 		else
 		{
 			Math::isInt32($sd, 1, DecimalConfig::MAX_DIGITS);
@@ -3988,7 +3988,7 @@ class Decimal
 			{ Math::isInt32($rm, 0, 8); }
 
 			$x = static::finalise(new Decimal($x, $c), $sd, $rm);
-			$str = static::__finiteToString($x, $sd <= $x->_e() || $x->_e() <= $c->toExpNeg, $sd);
+			$str = static::__finiteToString($x, $sd <= $x->_e || $x->_e <= $c->toExpNeg, $sd);
 		}
 
 		return $x->isNeg() && !$x->isZero() ? '-'.$str : $str;
@@ -4068,7 +4068,7 @@ class Decimal
 	{
 		$x = $this;
 		$c = $this->_config;
-		$str = static::__finiteToString($x, $x->_e() <= $c->toExpNeg || $x->_e() >= $c->toExpPos);
+		$str = static::__finiteToString($x, $x->_e <= $c->toExpNeg || $x->_e >= $c->toExpPos);
 		return $x->isNeg() && !$x->isZero() ? '-'.$str : $str;
 	}
 
@@ -4080,7 +4080,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public function truncated () : Decimal
-	{ return static::finalise(new Decimal($this, $this->_config), $this->_e()+1, 1); }
+	{ return static::finalise(new Decimal($this, $this->_config), $this->_e+1, 1); }
 
 	/**
 	 * Alias to truncated() method.
@@ -4124,16 +4124,6 @@ class Decimal
 	{ $this->_exponent = $exponent; return $this; }
 
 	/**
-	 * Get Decimal exponent.
-	 *
-	 * @param mixed $default
-	 * @since 1.0.0
-	 * @return integer|float Integer or NAN
-	 */
-	public function _e ()
-	{ return $this->_exponent ?? \NAN; }
-
-	/**
 	 * Set Decimal sign.
 	 *
 	 * @param int|float $sign
@@ -4142,16 +4132,6 @@ class Decimal
 	 */
 	public function s ( $sign )
 	{ $this->_sign = $sign; return $this; }
-
-	/**
-	 * Get Decimal sign.
-	 *
-	 * @param mixed $default
-	 * @since 1.0.0
-	 * @return integer|float Integer or NAN
-	 */
-	public function _s ()
-	{ return $this->_sign ?? \NAN; }
 
 	/**
 	 * If Decimal is signed.
@@ -4173,15 +4153,6 @@ class Decimal
 	{ $this->_digits = $digits; return $this; }
 
 	/**
-	 * Get Decimal digits.
-	 *
-	 * @since 1.0.0
-	 * @return array|null
-	 */
-	public function _d () : ?array
-	{ return $this->_digits ?? null; }
-
-	/**
 	 * Push to digits.
 	 *
 	 * @param integer $i
@@ -4201,15 +4172,6 @@ class Decimal
 	{ return !empty($this->_digits); }
 
 	/**
-	 * Get Decimal configuration.
-	 * 
-	 * @since 1.0.0
-	 * @return DecimalConfig
-	 */
-	public function _c () : DecimalConfig
-	{ return $this->_config; }
-
-	/**
 	 * Round $x to $sd significant digits 
 	 * using rounding mode $rm.
 	 *
@@ -4227,7 +4189,7 @@ class Decimal
 	) : Decimal
 	{
 		$x = clone $x;
-		$config = $x->_c();
+		$config = $x->_c;
 		$xdi = 0;
 
 		while (true)
@@ -4235,7 +4197,7 @@ class Decimal
 			// Don't round if sd is null or undefined
 			if ( isset($sd) && !is_null($sd) )
 			{
-				$xd = $x->_d();
+				$xd = $x->_d;
 
 				// Infinity/NaN
 				if ( !$x->isFinite() || $x->isNaN() )
@@ -4314,7 +4276,7 @@ class Decimal
 
 				$roundUp =
 					$rm < 4 ?
-					($rd || $isTruncated) && ($rm == 0 || $rm == ($x->_s() < 0 ? 3 : 2)) :
+					($rd || $isTruncated) && ($rm == 0 || $rm == ($x->_s < 0 ? 3 : 2)) :
 					$rd > 5 ||
 					($rd == 5 &&
 						($rm == 4 ||
@@ -4328,7 +4290,7 @@ class Decimal
 									$xd[$xdi - 1]??0) %
 								10 &
 								1) ||
-							$rm == ($x->_s() < 0 ? 8 : 7)));
+							$rm == ($x->_s < 0 ? 8 : 7)));
 
 				if ( $sd < 1 || !isset($xd[0]) )
 				{
@@ -4337,7 +4299,7 @@ class Decimal
 					if ( $roundUp )
 					{
 						// Convert sd to decimal places.
-						$sd -= $x->_e() + 1;
+						$sd -= $x->_e + 1;
 
           			// 1, 0.1, 0.01, 0.001, 0.0001 etc.
 						$xd[0] = \pow(10, (static::LOG_BASE - $sd % static::LOG_BASE) % static::LOG_BASE);
@@ -4390,7 +4352,7 @@ class Decimal
 							// if i != k the length has increased.
 							if ( $i != $k )
 							{
-								$x->e($x->_e()+1);
+								$x->e($x->_e+1);
 								if ( $xd[0] == static::BASE )
 								{ $xd[0] = 1; }
 							}
@@ -4423,12 +4385,12 @@ class Decimal
 
 		if ( static::$_external )
 		{
-			if ( $x->_e() > $config->maxE )
+			if ( $x->_e > $config->maxE )
 			{
 				$x->d(null);
 				$x->e(\NAN);
 			}
-			else if ( $x->_e() < $config->minE )
+			else if ( $x->_e < $config->minE )
 			{
 				// Zero
 				$x->d([0]);
@@ -4453,7 +4415,7 @@ class Decimal
 		Decimal $x
 	) : Decimal
 	{
-		$len = \count($x->_d());
+		$len = \count($x->_d);
 
 		// Argument reduction: cos(4x) = 8*(cos^4(x) - cos^2(x)) + 1
 		// i.e. cos(x) = 8*(cos^4(x/4) - cos^2(x/4)) + 1
@@ -4505,10 +4467,10 @@ class Decimal
 		$base = null
 	) : Decimal
 	{
-		$c = $x->_c();
-		$sign = $x->_s() === $y->_s() ? 1 : -1;
-		$xd = $x->_d();
-		$yd = $y->_d();
+		$c = $x->_c;
+		$sign = $x->_s === $y->_s ? 1 : -1;
+		$xd = $x->_d;
+		$yd = $y->_d;
 
 		// If either is NaN, ±Infinity or ±0...
 		if ( empty($xd) || empty($yd) || !$xd[0] || !$yd[0] )
@@ -4530,13 +4492,13 @@ class Decimal
 		if ( $base )
 		{
 			$logBase = 1;
-			$e = $x->_e() - $y->_e();
+			$e = $x->_e - $y->_e;
 		}
 		else
 		{
 			$base = Decimal::BASE;
 			$logBase = Decimal::LOG_BASE;
-			$e = \intval(\floor($x->_e() / $logBase) - \floor($y->_e() / $logBase));
+			$e = \intval(\floor($x->_e / $logBase) - \floor($y->_e / $logBase));
 		}
 
 		$yl = \count($yd);
@@ -4558,7 +4520,7 @@ class Decimal
 			$rm = $c->rounding;
       } 
 		else if ($dp) 
-		{ $sd = $pr + ($x->_e() - $y->_e()) + 1; } 
+		{ $sd = $pr + ($x->_e - $y->_e) + 1; } 
 		else 
 		{ $sd = $pr; }
 
@@ -4757,11 +4719,11 @@ class Decimal
 
 			$q->d($qd);
 			$q->e($i + $e * $logBase - 1);
-			$qy = static::finalise($q, $dp ? $pr + $q->_e() + 1 : $pr, $rm, $more);
+			$qy = static::finalise($q, $dp ? $pr + $q->_e + 1 : $pr, $rm, $more);
 
-			$q->e($qy->_e());
-			$q->d($qy->_d());
-			$q->s($qy->_s());
+			$q->e($qy->_e);
+			$q->d($qy->_d);
+			$q->s($qy->_s);
 		}
 
 		return $q;
@@ -4784,8 +4746,8 @@ class Decimal
 		if ( !$x->isFinite() )
 		{ return static::__nonFiniteToString($x); }
 
-		$e = $x->_e();
-		$str = Math::digitsToStr($x->_d());
+		$e = $x->_e;
+		$str = Math::digitsToStr($x->_d);
 		$len = \strlen($str);
 
 		if ( $isExp )
@@ -4795,7 +4757,7 @@ class Decimal
 			else if ( $len > 1 )
 			{ $str = $str[0].'.'.Utils::sliceStr($str,1); }
 
-			$str = $str . ($x->_e() < 0 ? 'e' : 'e+') . \strval($x->_e());
+			$str = $str . ($x->_e < 0 ? 'e' : 'e+') . \strval($x->_e);
 		}
 		else if ( $e < 0 )
 		{ 
@@ -4843,7 +4805,7 @@ class Decimal
 		int $pr = null
 	) : Decimal
 	{
-		if ( $sd > static::LN10_PRECISION )
+		if ( $sd > DecimalConfig::LN10_PRECISION )
 		{
 			static::$_external = true;;
 			
@@ -4872,7 +4834,7 @@ class Decimal
 		int $rm = DecimalCOnfig::ROUND_HALF_UP
 	) : Decimal
 	{
-		if ( $sd > static::PI_PRECISION )
+		if ( $sd > DecimalConfig::PI_PRECISION )
 		{ throw new RuntimeException('Precision of PI exceeded.'); }
 
 		return static::finalise(new Decimal(DecimalConfig::PI, $config), $sd, $rm, true);
@@ -4913,9 +4875,9 @@ class Decimal
 			{ 
 				$r = $r->times($base); 
 				
-				$r->d(Utils::truncate($r->_d(), $k));
+				$r->d(Utils::truncate($r->_d, $k));
 
-				if ( \count($r->_d()) === $k )
+				if ( \count($r->_d) === $k )
 				{ $isTruncated = true; }
 			}
 
@@ -4923,8 +4885,8 @@ class Decimal
 
 			if ( $number === 0 )
 			{
-				$number = \count($r->_d()) - 1;
-				$rd = $r->_d();
+				$number = \count($r->_d) - 1;
+				$rd = $r->_d;
 				
 				if ( $isTruncated && $rd[$number] === 0 )
 				{ $rd[$number] = $rd[$number]++; }
@@ -4934,7 +4896,7 @@ class Decimal
 			}
 
 			$base = $base->times($base);
-			$base->d(Utils::truncate($base->_d(), $k));
+			$base->d(Utils::truncate($base->_d, $k));
 		}
 
 		static::$_external = true;
@@ -5029,27 +4991,27 @@ class Decimal
 		$rep = 0;
 		$i = 0;
 		$k = 0;
-		$c = $x->_c();
+		$c = $x->_c;
 		$rm = $c->rounding;
 		$pr = $c->precision;
 
 		// 0/NaN/Infinity?
-		if ( !$x->isFinite() || $x->isNaN() || $x->isZero() || $x->_e() > 17 )
+		if ( !$x->isFinite() || $x->isNaN() || $x->isZero() || $x->_e > 17 )
 		{
 			$n = 0;
 
 			if ( $x->isFinite() )
 			{
-				if ( !$x->_d()[0] )
+				if ( !$x->_d[0] )
 				{ $n = 1; }
-				else if ( $x->_s() < 0 )
+				else if ( $x->_s < 0 )
 				{ $n = 0; }
 				else 
 				{ $n = \INF; }
 			}
 			else if ( !$x->isNaN() )
 			{
-				if ( $x->_s() < 0 )
+				if ( $x->_s < 0 )
 				{ $n = 0; }
 				else 
 				{ $n = $x; }
@@ -5071,7 +5033,7 @@ class Decimal
 		$t = new Decimal(0.03125, $c);
 
 		// while abs(x) >= 0.1
-		while ( $x->_e() > -2 )
+		while ( $x->_e > -2 )
 		{
 			// x = x / 2^5
 			$x = $x->times($t);
@@ -5096,8 +5058,8 @@ class Decimal
 			$t = $sum->plus(static::__divide($pow, $denominator, $wpr, 1));
 
 			if ( 
-				Utils::sliceStr(Math::digitsToStr($t->_d()), 0, $wpr) 
-				=== Utils::sliceStr(Math::digitsToStr($sum->_d()), 0, $wpr) 
+				Utils::sliceStr(Math::digitsToStr($t->_d), 0, $wpr) 
+				=== Utils::sliceStr(Math::digitsToStr($sum->_d), 0, $wpr) 
 			)
 			{
 				$j = $k;
@@ -5113,7 +5075,7 @@ class Decimal
 
 				if ( \is_null($sd) )
 				{
-					if ( $rep < 3 && Math::checkRoundingDigits($sum->_d(), $wpr - $guard, $rm, $rep) )
+					if ( $rep < 3 && Math::checkRoundingDigits($sum->_d, $wpr - $guard, $rm, $rep) )
 					{
 						$c->precision = $wpr += 10;
 						$denominator = $pow = $t = new Decimal(1,$c);
@@ -5165,8 +5127,8 @@ class Decimal
 		$x = $y;
 		$n = 1;
 		$guard = 10;
-		$xd = $x->_d();
-		$c = $x->_c();
+		$xd = $x->_d;
+		$c = $x->_c;
 		$rm = $c->rounding;
 		$pr = $c->precision;
 
@@ -5183,7 +5145,7 @@ class Decimal
 
 			if ( $x->isZero() )
 			{ $n = -\INF; }
-			else if ( $x->_s() !== 1 )
+			else if ( $x->_s !== 1 )
 			{ $n = \NAN; }
 			else if ( $x->isFinite() )
 			{ $n = 0; }
@@ -5205,7 +5167,7 @@ class Decimal
 		$ds = Math::digitsToStr($xd);
 		$ds0 = (int)$ds[0];
 		
-		if ( \abs(($e = $x->_e())) < 1.5e15 )
+		if ( \abs(($e = $x->_e)) < 1.5e15 )
 		{
 			// Argument reduction.
 			// The series converges faster the closer 
@@ -5224,12 +5186,12 @@ class Decimal
 			while ( ($ds0 < 7 && $ds0 != 1) || ( $ds0 == 1 && (int)($ds[1]??0) > 3 ) )
 			{
 				$x = $x->times($y);
-				$ds = Math::digitsToStr($x->_d());
+				$ds = Math::digitsToStr($x->_d);
 				$ds0 = (int)$ds[0];
 				$n++;
 			}
 
-			$e = $x->_e();
+			$e = $x->_e;
 
 			if ( $ds0 > 1 )
 			{
@@ -5273,8 +5235,8 @@ class Decimal
 			$t = $sum->plus(static::__divide($numerator, new Decimal($denominator,$c), $wpr, 1));
 
 			if ( 
-				Utils::sliceStr(Math::digitsToStr($t->_d()), 0, $wpr) 
-				===  Utils::sliceStr(Math::digitsToStr($sum->_d()), 0, $wpr) 
+				Utils::sliceStr(Math::digitsToStr($t->_d), 0, $wpr) 
+				===  Utils::sliceStr(Math::digitsToStr($sum->_d), 0, $wpr) 
 			)
 			{
 				$sum = $sum->times(2);
@@ -5298,7 +5260,7 @@ class Decimal
 				// `wpr - guard` is the index of first rounding digit.
 				if ( \is_null($sd) )
 				{
-					if ( Math::checkRoundingDigits($sum->_d(), $wpr - $guard, $rm, $rep??null) )
+					if ( Math::checkRoundingDigits($sum->_d, $wpr - $guard, $rm, $rep??null) )
 					{
 						$c->precision = $wpr += $guard;
 						$t = $numerator = $x = static::__divide($x1->minus(1), $x1->plus(1), $wpr, 1);
@@ -5424,12 +5386,12 @@ class Decimal
 
 			if ( static::$_external )
 			{
-				if ( $x->_e() > $x->_c()->maxE )
+				if ( $x->_e > $x->_c->maxE )
 				{
 					$x->d(null);
 					$x->e(\NAN);
 				}
-				else if ( $x->_e() < $x->_c()->minE )
+				else if ( $x->_e < $x->_c->minE )
 				{
 					// Zero
 					$x->d([0]);
@@ -5508,7 +5470,7 @@ class Decimal
 			$len = \strlen($str);
 			$i = $len - $i;
 
-			$divisor = static::__intPow($x->_c(), new Decimal($base, $x->_c()), $i, $i * 2);
+			$divisor = static::__intPow($x->_c, new Decimal($base, $x->_c), $i, $i * 2);
 		}
 
 		$xd = Math::convertBase($str, $base, static::BASE);
@@ -5520,11 +5482,11 @@ class Decimal
 
 		if ( $i < 0 )
 		{ 
-			$y = new Decimal($x->_s() * 0, $x->_c()); 
+			$y = new Decimal($x->_s * 0, $x->_c); 
 
-			$x->e($y->_e());
-			$x->s($y->_s());
-			$x->d($y->_d());
+			$x->e($y->_e);
+			$x->s($y->_s);
+			$x->d($y->_d);
 
 			return $x;
 		}
@@ -5544,18 +5506,18 @@ class Decimal
 		{
 			$y = static::__divide($x, $divisor, $len * 4);
 
-			$x->e($y->_e());
-			$x->s($y->_s());
-			$x->d($y->_d());
+			$x->e($y->_e);
+			$x->s($y->_s);
+			$x->d($y->_d);
 		}
 
 		if ( $p )
 		{ 
 			$y = $x->times( \abs($p) < 54 ? \pow(2, $p) : (new Decimal(2))->pow(2) ); 
 
-			$x->e($y->_e());
-			$x->s($y->_s());
-			$x->d($y->_d());
+			$x->e($y->_e);
+			$x->s($y->_s);
+			$x->d($y->_d);
 		}
 		
 		static::$_external = true;
@@ -5576,7 +5538,7 @@ class Decimal
 		Decimal $x
 	) : Decimal
 	{
-		$len = \count($x->_d());
+		$len = \count($x->_d);
 
 		if ( $len < 3 )
 		{ return static::__taylorSeries($c, 2, $x, $x); }
@@ -5642,12 +5604,12 @@ class Decimal
 			$y = static::__divide($t->times($x2), new Decimal($n++ * $n++, $c), $pr, 1);
 			$t = $u->plus($y);
 
-			if ( isset($t->_d()[$k]) )
+			if ( isset($t->_d[$k]) )
 			{
 				for ( 
 					$j = $k; 
-					isset($t->_d()[$j], $u->_d()[$j]) 
-						&& $t->_d()[$j] === $u->_d()[$j] 
+					isset($t->_d[$j], $u->_d[$j]) 
+						&& $t->_d[$j] === $u->_d[$j] 
 						&& $j--; 
 				);
 
@@ -5663,7 +5625,7 @@ class Decimal
 		}
 
 		static::$_external = true;
-		$t->d(Utils::sliceArray($t->_d(), 0, $k+1));
+		$t->d(Utils::sliceArray($t->_d, 0, $k+1));
 
 		return $t;
 	}
@@ -5736,7 +5698,7 @@ class Decimal
 		int $rm = null 
 	)
 	{
-		$c = $x->_c();
+		$c = $x->_c;
 		$isExp = !\is_null($sd);
 
 		if ( $isExp )
@@ -5790,7 +5752,7 @@ class Decimal
 				
 				$y->e(\strlen($str)-$i);
 				$y->d(Math::convertBase(static::__finiteToString($y), 10, $base));
-				$y->e(\count($y->_d()));
+				$y->e(\count($y->_d));
 			}
 
 			$xd = Math::convertBase($str, 10, $base);
@@ -5814,8 +5776,8 @@ class Decimal
 					$x->d($xd);
 					$x->e($e);
 					$x = static::__divide($x, $y, $sd, $rm, 0, $base);
-					$xd = $x->_d();
-					$e = $x->_e();
+					$xd = $x->_d;
+					$e = $x->_e;
 					$roundUp = static::$_inexact;
 				}
 
@@ -5825,13 +5787,13 @@ class Decimal
 
 				$roundUp =
 					$rm < 4 ?
-					(!\is_null($i) || $roundUp) && ( $rm === 0 || $rm === ($x->_s() < 0 ? 3 : 2) ) :
+					(!\is_null($i) || $roundUp) && ( $rm === 0 || $rm === ($x->_s < 0 ? 3 : 2) ) :
 						$i > $k || 
 						( $i === $k && 
 							($rm === 4 || 
 								$roundUp ||
 									($rm === 6 && $xd[$sd-1] & 1) ||
-										$rm === ($x->_s() < 0 ? 8 : 7)));
+										$rm === ($x->_s < 0 ? 8 : 7)));
 
 				$xd = Utils::sliceArray($xd, 0, $sd);
 
@@ -5906,7 +5868,7 @@ class Decimal
 			$str = ($baseOut == 16 ? '0x' : ($baseOut == 2 ? '0b' : ($baseOut == 8 ? '0o' : ''))) . $str;
 		}
 
-		return $x->_s() < 0 ? '-'.$str : $str;
+		return $x->_s < 0 ? '-'.$str : $str;
 	}
 
 	/**
