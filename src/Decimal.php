@@ -2,6 +2,7 @@
 namespace Piggly\Decimal;
 
 use ArrayObject;
+use Exception;
 use RuntimeException;
 
 class Decimal
@@ -104,8 +105,16 @@ class Decimal
 		{
 			if ( $n === 0 )
 			{
-				// PHP does not catch negative zero
 				$this->_sign = 1;
+				$this->_exponent = 0;
+				$this->_digits = [0];
+
+				return;
+			}
+
+			if ( $n === -0.0 )
+			{
+				$this->_sign = -1;
 				$this->_exponent = 0;
 				$this->_digits = [0];
 
@@ -1070,7 +1079,7 @@ class Decimal
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
-	public static function hypot () : Decimal
+	public static function hypotOf () : Decimal
 	{
 		$args = \func_get_args();
 
@@ -1284,7 +1293,7 @@ class Decimal
 
 		$pr = $c->precision;
 		$rm = $c->rounding;
-		$c->precision = $pr+2+(int)\max((int)\abs($x->_e()), $x->sd()) + 6;
+		$c->precision = $pr+2*(int)\max((int)\abs($x->_e()), $x->sd()) + 6;
 		$c->rounding = 1;
 
 		DecimalHelper::external(false);
@@ -1532,7 +1541,7 @@ class Decimal
 		// Ensure |x| < 0.42
 		// atan(x) = 2 * atan(x / (1 + sqrt(1 + x^2)))
 
-		$k = \min(28, ($wpr/static::LOG_BASE+2) | 0);
+		$k = \min(28, (($wpr/static::LOG_BASE+2) | 0));
 		
 		for ( $i = $k; $i; --$i )
 		{ $x = $x->div($x->times($x)->plus(1)->sqrt()->plus(1)); }
@@ -1543,7 +1552,7 @@ class Decimal
 		$n = 1;
 		$x2 = $x->times($x);
 		$r = new Decimal($x,$c);
-		$px = $x;
+		$px = Decimal::clone($x);
 
 		// atan(x) = x - x^3/3 + x^5/5 - x^7/7 + ...
 		for (; $i !== -1; )
@@ -1559,7 +1568,7 @@ class Decimal
 		}
 
 		if ( $k )
-		{ $r = $r->times(3 << ($k -1)); }
+		{ $r = $r->times(2 << ($k -1)); }
 
 		DecimalHelper::external(true);
 		
@@ -1973,9 +1982,9 @@ class Decimal
 	 * @param array<Decimal|float|int|string> $x
 	 * @param array<Decimal|float|int|string> $base The base of the logarithm.
 	 * @since 1.0.0
-	 * @return bool
+	 * @return Decimal
 	 */
-	public static function logOf ( $x, $base = null )
+	public static function logOf ( $x, $base = null ) : Decimal
 	{ return (new Decimal($x))->log($base); }
 
 	/**
@@ -1987,9 +1996,9 @@ class Decimal
 	 * 
 	 * @param array<Decimal|float|int|string> $x
 	 * @since 1.0.0
-	 * @return bool
+	 * @return Decimal
 	 */
-	public static function log2Of ( $x )
+	public static function log2Of ( $x ) : Decimal
 	{ return (new Decimal($x))->log(2); }
 
 	/**
@@ -2001,32 +2010,32 @@ class Decimal
 	 * 
 	 * @param array<Decimal|float|int|string> $x
 	 * @since 1.0.0
-	 * @return bool
+	 * @return Decimal
 	 */
-	public static function log10Of ( $x )
+	public static function log10Of ( $x ) : Decimal
 	{ return (new Decimal($x))->log(10); }
 
 	/**
 	 * Return a new Decimal whose value is 
 	 * the maximum of the arguments.
 	 * 
-	 * @param array<Decimal|float|int|string> ...$args
+	 * @param array<Decimal|float|int|string> $nums
 	 * @since 1.0.0
-	 * @return bool
+	 * @return Decimal
 	 */
-	public static function maxOf ()
-	{ return DecimalHelper::maxOrMin(DecimalConfig::instance(), 'lt', \func_get_args()); }
+	public static function maxOf ( array $nums ) : Decimal
+	{ return DecimalHelper::maxOrMin(DecimalConfig::instance(), 'lt', $nums); }
 
 	/**
 	 * Return a new Decimal whose value is 
 	 * the minimum of the arguments.
 	 * 
-	 * @param array<Decimal|float|int|string> ...$args
+	 * @param array<Decimal|float|int|string> $nums
 	 * @since 1.0.0
-	 * @return bool
+	 * @return Decimal
 	 */
-	public static function minOf ()
-	{ return DecimalHelper::maxOrMin(DecimalConfig::instance(), 'gt', \func_get_args()); }
+	public static function minOf ( array $nums ) : Decimal
+	{ return DecimalHelper::maxOrMin(DecimalConfig::instance(), 'gt', $nums); }
 
 	/**
 	 * Return a new Decimal whose value is the value of this 
@@ -2406,7 +2415,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function lnOf ( $x ) : Decimal
-	{ return (new Decimal($x))->exp(); }
+	{ return (new Decimal($x))->ln(); }
 
 	/**
 	 * Return a new Decimal whose value is the value 
@@ -2661,9 +2670,9 @@ class Decimal
 	 * @todo Implement random bytes
 	 * @param int $sd Significant digits. Integer, 0 to MAX_DIGITS inclusive.
 	 * @since 1.0.0
-	 * @return void
+	 * @return Decimal
 	 */
-	public static function random ( int $sd = null )
+	public static function random ( int $sd = null ) : Decimal
 	{
 		$i = 0;
 		$c = DecimalConfig::instance();
@@ -2698,7 +2707,7 @@ class Decimal
 		else
 		{
 			for (; $i < $k;) 
-			{ $rd[$i++] = (\rand(0,1) * 1e7) | 0; }
+			{ $rd[$i++] = ((\mt_rand() / \mt_getrandmax()) * 1e7) | 0; }
 		}
 
 		$k = $rd[--$i];
@@ -2712,7 +2721,7 @@ class Decimal
 		}
 
 		// Remove trailing words which are zero.
-		for ( ; $rd[$i] === 0; $i-- )
+		for ( ; isset($rd[$i]) && $rd[$i] === 0; $i-- )
 		{ \array_pop($rd); }
 
 		// Zero?
@@ -2768,7 +2777,6 @@ class Decimal
 	 * To emulate PHP default, set rounding to 4 (ROUND_HALF_UP).
 	 *
 	 * @param Decimal|float|int|string $x
-	 * @param Decimal|float|int|string $y
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
@@ -2795,7 +2803,7 @@ class Decimal
 			if ( !$x->isZero() )
 			{ return $x->_s(); }
 			else 
-			{ return 0; }
+			{ return $x->_s() < 0 ? -0.0 : 0; }
 		}
 		
 		return $x->_s() ?? \NAN;
@@ -2925,7 +2933,7 @@ class Decimal
 
 			// PHP does not support long integers
 			// should it use bcsqrt when infinity
-			$s = ($s == \INF) ? \bcsqrt($n) : 0;
+			$s = \bcsqrt($n, $c->precision+1);
 			$e = (int)\floor(($e+1)/2) - \intval($e < 0 || $e % 2);
 
 			// TODO? May never be infinity ??
@@ -2941,7 +2949,12 @@ class Decimal
 			$r = new Decimal($n, $c);
 		}
 		else
-		{ $r = new Decimal(\strval($s), $c); }
+		{ 
+			if ( \stripos(\strval($s), 'e') === false && \stripos(\strval($s), '.') === false )
+			{ $s = \bcsqrt($x->toString(), $c->precision+4); }
+
+			$r = new Decimal($s, $c); 
+		}
 
 		$sd = ($e = $c->precision) + 3;
 		$rep = null;
@@ -3204,7 +3217,7 @@ class Decimal
 		}
 
 		// Remove trailing zeros
-		for ( ; isset($r[--$rl]) && $r[$rl] === 0; )
+		for ( ; isset($r[--$rl]) && !$r[$rl]; )
 		{ \array_pop($r); }
 
 		if ($carry) 
@@ -3447,7 +3460,10 @@ class Decimal
 		{ $maxD = $e > 0 ? $d : $n1; }
 		else
 		{
-			$n = new Decimal($maxD, $c);
+			try
+			{ $n = new Decimal($maxD, $c); }
+			catch ( Exception $e )
+			{ throw new RuntimeException('Invalid maximum denominator argument.'); }
 
 			if ( !$n->isInt() || $n->lt($n1) )
 			{ throw new RuntimeException('Invalid maximum denominator argument.'); }
@@ -3459,8 +3475,9 @@ class Decimal
 
 		$n = new Decimal(DecimalHelper::digitsToString($xd), $c);
 		$pr = $c->precision;
+		$c->precision = $e = \count($xd) * static::LOG_BASE * 2;
 
-		for (;;) 
+		while ( true )
 		{
 			$q = DecimalHelper::divide($n, $d, 0, 1, 1);
 			$d2 = $d0->plus($q->times($d1));
@@ -3483,7 +3500,10 @@ class Decimal
 		$d0 = $d0->plus($d2->times($d1));
 		$n0->s($x->_s()); $n1->s($x->_s());
 
-		$r = DecimalHelper::divide($n1, $d1, $e, 1)
+		$__div = DecimalHelper::divide($n1, $d1, $e, 1);
+
+		$r = 
+			DecimalHelper::divide($n1, $d1, $e, 1)
 				->minus($x)
 				->abs()
 				->cmp(
@@ -3714,8 +3734,8 @@ class Decimal
 		$y = new Decimal($y, $c);
 		$yn = $y->toNumber();
 
-		if ( $x->isFinite() || $x->isNaN() || $x->isZero()
-				|| $y->isFinite() || $y->isNaN() || $y->isZero() )
+		if ( !$x->isFinite() || $x->isNaN() || $x->isZero()
+				|| !$y->isFinite() || $y->isNaN() || $y->isZero() )
 		{ return new Decimal(\pow($x->toNumber(), $yn), $c); }
 
 		$x = new Decimal($x,$c);
@@ -3730,11 +3750,14 @@ class Decimal
 		{ return DecimalHelper::finalise($x, $pr, $rm); }
 
 		// y exponent
-		$e = (int)\floor($y->_e()/static::LOG_BASE);
+		$e = \intval(\floor($y->_e()/static::LOG_BASE));
 
 		// If y is a small integer use the 
 		// 'exponentiation by squaring' algorithm.
-		if ( $e >= \count($y->_d()) - 1 && ($k = $yn < 0 ? -$yn : $yn) <= static::MAX_SAFE_INTEGER)
+		if ( 
+			$e >= (\count($y->_d()) - 1) && 
+			($k = ($yn < 0 ? -$yn : $yn)) <= static::MAX_SAFE_INTEGER
+		)
 		{
 			$r = DecimalHelper::intPow($c, $x, $k, $pr);
 			return $y->_s() < 0 ? (new Decimal(1,$c))->div($r) : DecimalHelper::finalise($r, $pr, $rm);
@@ -3751,7 +3774,7 @@ class Decimal
 
 			// Result is positive if x is negative and the 
 			// last digit of integer y is even.
-			if ( ($y->_d()[$e] & 1) == 0 )
+			if ( (($y->_d()[$e]??0) & 1) == 0 )
 			{ $s = 1; } 
 
 			// if x.eq(-1)
@@ -3767,15 +3790,16 @@ class Decimal
 		// log10(x) = log10(x_significand) + x_exponent
 		// log10(x_significand) = ln(x_significand) / ln(10)
 		$k = \pow($x->toNumber(), $yn);
-		$e = $k == 0 || (new Decimal($k, $c))->isFinite()
-				? \floor($yn * (\log(\floatval('0.'.DecimalHelper::digitsToString($x->_d())))) / \M_LN10 + $x->_e() + 1)
+		$e = 
+				$k == 0 || $k == \INF
+				? (int)\floor($yn * (\log(\floatval('0.'.DecimalHelper::digitsToString($x->_d()))) / \M_LN10 + $x->_e() + 1))
 				: (new Decimal($k.''))->_e();
 
 		// Exponent estimate may be incorrect 
 		// e.g. x: 0.999999999999999999, y: 2.29, e: 0, r.e: -1.
 
 		// Overflow/underflow?
-		if ( $e > $c->maxE+1 || $e < $c->minE - 1 )
+		if ( $e > $c->maxE+1 || $e < $c->minE-1 )
 		{ 
 			$n = 0;
 
@@ -3801,7 +3825,7 @@ class Decimal
 		// naturalLogarithm(x). Example of failure without these extra digits (precision: 10):
 		// new Decimal(2.32456).pow('2087987436534566.46411')
 		// should be 1.162377823e+764914905173815, but is 1.162355823e+764914905173815
-		$k = (int)\min(12, \strval($e.''));
+		$k = (int)\min(12, \strlen($e.''));
 		// r = x^y = exp(y*ln(x))
 		$r = DecimalHelper::naturalExponential($y->times(DecimalHelper::naturalLogarithm($x, $pr+$k)), $pr);
 		

@@ -224,7 +224,7 @@ class DecimalHelper
 		// Is the rounding digit in the first word of d?
 		if ( --$i < 0 )
 		{
-			$i += Decimal::BASE;
+			$i += Decimal::LOG_BASE;
 			$di = 0;
 		}
 		else
@@ -236,8 +236,8 @@ class DecimalHelper
 		// i is the index (0 - 6) of the rounding digit.
 		// E.g. if within the word 3487563 the first rounding digit is 5,
 		// then i = 4, k = 1000, rd = 3487563 % 1000 = 563
-		$k = (int)\pow(10, Decimal::LOG_BASE - 1);
-		$rd = ($d[$di]??0) % $k | 0;
+		$k = (int)\pow(10, Decimal::LOG_BASE - $i);
+		$rd = isset($d[$di]) && $d[$di] !== 0 ? $d[$di] % $k : 0;
 
 		if ( \is_null($repeating) )
 		{
@@ -257,11 +257,13 @@ class DecimalHelper
 			}
 			else 
 			{
-				// TODO IF WRONG
+				$digit = isset($d[$di + 1]) ? ($d[$di + 1] / $k / 100) : 0;
+
 				$r = (
-					((($rm < 4 && $rd + 1 == $k) || ($rm > 3 && $rd + 1 == $k / 2)) && 
-					(($d[$di + 1] / $k / 100) | 0) == (int)\pow(10, $i - 2) - 1) ||
-					(($rd == $k / 2 || $rd == 0) && (($d[$di + 1] / $k / 100) | 0) == 0));
+					(($rm < 4 && $rd + 1 == $k) || ($rm > 3 && $rd + 1 == $k / 2)) &&
+					(($digit) == \intval(\pow(10, $i - 2)) - 1)
+				) ||
+				(($rd == $k / 2 || $rd == 0) && (($digit) == 0));
 			}
 		}
 		else
@@ -280,9 +282,11 @@ class DecimalHelper
 			}
 			else 
 			{
+				$digit = isset($d[$di + 1]) ? ($d[$di + 1] / $k / 1000) : 0;
+
 				$r = ((($repeating || $rm < 4) && $rd + 1 == $k) 
 						|| (!$repeating && $rm > 3 && $rd + 1 == $k / 2)) 
-						&& (($d[$di + 1] / $k / 1000) | 0) == (int)\pow(10, $i - 3) - 1;
+						&& ($digit) == (int)\pow(10, $i - 3) - 1;
 			}
 		}
 		
@@ -714,7 +718,7 @@ class DecimalHelper
 				{
 					$i += Decimal::LOG_BASE;
 					$j = $sd;
-					$w = $xd[$xdi = 0];
+					$w = $xd[($xdi = 0)];
 
 					// Get the rounding digit at index j of w.
 					$rd = $w / \pow(10, $digits - $j - 1) % 10 | 0;
@@ -779,7 +783,7 @@ class DecimalHelper
 									($j > 0 ?
 									$w / \pow(10, $digits - $j) :
 									0) :
-									$xd[$xdi - 1]) %
+									$xd[$xdi - 1]??0) %
 								10 &
 								1) ||
 							$rm == ($x->_s() < 0 ? 8 : 7)));
@@ -827,7 +831,7 @@ class DecimalHelper
 
 				if ( $roundUp )
 				{
-					for (;;)
+					while ( true )
 					{
 						// Is the digit to be rounded up in the first word of xd?
 						if ( $xdi == 0 )
@@ -1141,7 +1145,7 @@ class DecimalHelper
 		$r = new Decimal(1, $config);
 		// Max n of 9007199254740991 takes 53 loop iterations.
       // Maximum digits array length; leaves [28, 34] guard digits.
-		$k = \ceil(($power/Decimal::LOG_BASE)+4);
+		$k = \intval(\ceil(($power/Decimal::LOG_BASE)+4));
 
 		static::external(false);
 
@@ -1277,13 +1281,13 @@ class DecimalHelper
 		$pr = $c->precision;
 
 		// 0/NaN/Infinity?
-		if ( !$x->isFinite() || $x->isNaN() || $x->isZero() )
+		if ( !$x->isFinite() || $x->isNaN() || $x->isZero() || $x->_e() > 17 )
 		{
 			$n = 0;
 
 			if ( $x->isFinite() )
 			{
-				if ( empty($x->_d()[0]) )
+				if ( !$x->_d()[0] )
 				{ $n = 1; }
 				else if ( $x->_s() < 0 )
 				{ $n = 0; }
@@ -1464,8 +1468,9 @@ class DecimalHelper
 
 			// max n is 21 (gives 0.9, 1.0 or 1.1) (9e15 / 21 = 4.2e14).
 			// max n is 6 (gives 0.7 - 1.3)
-			while ( ($ds0 < 7 && $ds0 != 1) || ( $ds0 == 1 && (int)$ds[1] > 3 ) )
+			while ( ($ds0 < 7 && $ds0 != 1) || ( $ds0 == 1 && (int)($ds[1]??0) > 3 ) )
 			{
+				$__external = DecimalHelper::isExternal();
 				$x = $x->times($y);
 				$ds = static::digitsToString($x->_d());
 				$ds0 = (int)$ds[0];
@@ -1491,8 +1496,13 @@ class DecimalHelper
 			$x = static::naturalLogarithm(new Decimal($ds0.'.'.static::slice($ds,1), $c), $wpr-$guard)->plus($t);
 			$c->precision = $pr;
 
-			static::external(true);
-			return \is_null($sd) ? static::finalise($x, $pr, $rm, true) : $x;
+			if ( \is_null($sd) )
+			{
+				static::external(true);
+				return static::finalise($x, $pr, $rm, true);
+			}
+
+			return $x;
 		}
 
 		// x1 is x reduced to a value near 1.
@@ -2350,13 +2360,13 @@ class DecimalHelper
 		int $bl 
 	) : int
 	{
-		if ( $al !== $bl )
+		if ( $al != $bl )
 		{ $r = $al > $bl ? 1 : -1; }
 		else
 		{
 			for ( $i = $r = 0; $i < $al; $i++ )
 			{
-				if ( $a[$i] !== $b[$i] )
+				if ( $a[$i] != $b[$i] )
 				{
 					$r = $a[$i] > $b[$i] ? 1 : -1;
 					break;

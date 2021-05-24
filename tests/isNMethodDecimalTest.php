@@ -120,7 +120,7 @@ class isNMethodDecimalTest extends TestCase
 			[!$n->isZero()],
 			[!$n->isInt()],
 			[$n->eq('INF')],
-			[$n->eq(1/0)],
+			[$n->eq(\INF)],
 			[$n->gt('9e999')],
 			[$n->gte(\INF)],
 			[!$n->lt(\INF)],

@@ -82,7 +82,7 @@ class ConstructorDecimalTest extends TestCase
 	{
 		return [
 			[[0], 0, 1, 0],
-			[[0], 0, 1, -0], // TODO :: Need to solve it, SHOULD BE -1 SIGN
+			[[0], 0, 1, '-0'],
 			[[1], 0, -1, -1],
 			[[10], 1, -1, -10],
 
