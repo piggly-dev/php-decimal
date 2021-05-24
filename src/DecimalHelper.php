@@ -73,70 +73,13 @@ class DecimalHelper
 	const BASE = 1e7;
 
 	/**
-	 * Control external action.
-	 *
-	 * @param boolean $external
-	 * @since 1.0.0
-	 * @return void
-	 */
-	public static function external ( bool $external )
-	{ static::$_external = $external; }
-
-	/**
-	 * Check if external action is active.
-	 *
-	 * @since 1.0.0
-	 * @return boolean
-	 */
-	public static function isExternal () : bool
-	{ return static::$_external; }
-
-	/**
-	 * Mark inexact operation.
-	 *
-	 * @param bool $inexact
-	 * @since 1.0.0
-	 * @return void
-	 */
-	public static function inexact ( bool $inexact )
-	{ static::$_inexact = $inexact; }
-
-	/**
-	 * Get inexact operation.
-	 *
-	 * @since 1.0.0
-	 * @return int
-	 */
-	public static function _inexact () : bool
-	{ return static::$_inexact; }
-
-	/**
-	 * Mark quadrant operation.
-	 *
-	 * @param int $quadrant
-	 * @since 1.0.0
-	 * @return void
-	 */
-	public static function quadrant ( int $quadrant )
-	{ static::$_quadrant = $quadrant; }
-
-	/**
-	 * Get quadrant operation.
-	 *
-	 * @since 1.0.0
-	 * @return int
-	 */
-	public static function _quadrant () : int
-	{ return static::$_quadrant; }
-
-	/**
 	 * Convert an array of digits to a string.
 	 *
 	 * @param array|null $d
 	 * @since 1.0.0
 	 * @return string
 	 */
-	public static function digitsToString (
+	protected static function __digitsToString (
 		?array $d
 	) : string
 	{
@@ -154,7 +97,7 @@ class DecimalHelper
 				$k = Decimal::LOG_BASE - \strlen($ws);
 
 				if ( $k )
-				{ $str .= static::getZeroString($k); }
+				{ $str .= static::__getZeroString($k); }
 
 				$str .= $ws;
 			}
@@ -164,7 +107,7 @@ class DecimalHelper
 			$k = Decimal::LOG_BASE - \strlen($ws);
 
 			if ( $k )
-			{ $str .= static::getZeroString($k); }
+			{ $str .= static::__getZeroString($k); }
 		}
 		else if ( $w === 0 )
 		{ return '0'; }
@@ -176,28 +119,28 @@ class DecimalHelper
 		return $str.$w;
 	}
 
-	/**
-	 * Throw an exception if $i is not a int32.
-	 *
-	 * @param mixed $i
-	 * @param integer $min
-	 * @param integer $max
-	 * @since 1.0.0
-	 * @return void
-	 * @throws RuntimeException
-	 */
-	public static function checkInt32 (
-		$i,
-		int $min,
-		int $max
-	)
-	{
-		if ( $i === 0 || $i === '0' || $i === '-0' && $min <= 0 )
-		{ return; }
+	// /**
+	//  * Throw an exception if $i is not a int32.
+	//  *
+	//  * @param mixed $i
+	//  * @param integer $min
+	//  * @param integer $max
+	//  * @since 1.0.0
+	//  * @return void
+	//  * @throws RuntimeException
+	//  */
+	// protected static function __checkInt32 (
+	// 	$i,
+	// 	int $min,
+	// 	int $max
+	// )
+	// {
+	// 	if ( $i === 0 || $i === '0' || $i === '-0' && $min <= 0 )
+	// 	{ return; }
 
-		if ( !\is_int($i) || $i < $min || $i > $max )
-		{ throw new RuntimeException(\sprintf('`%s` is not a valid int32.', gettype($i))); }
-	}
+	// 	if ( !\is_int($i) || $i < $min || $i > $max )
+	// 	{ throw new RuntimeException(\sprintf('`%s` is not a valid int32.', gettype($i))); }
+	// }
 
 	/**
 	 * Check 5 rounding digits if `repeating` is null, 4 otherwise.
@@ -210,7 +153,7 @@ class DecimalHelper
 	 * @param bool $repeating
 	 * @return bool
 	 */
-	public static function checkRoundingDigits (
+	protected static function __checkRoundingDigits (
 		$d,
 		$i,
 		$rm,
@@ -306,7 +249,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return array
 	 */
-	public static function convertBase (
+	protected static function __convertBase (
 		string $str,
 		int $baseIn,
 		int $baseOut
@@ -348,7 +291,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
-	public static function cosine (
+	protected static function __cosine (
 		DecimalConfig $c,
 		Decimal $x
 	) : Decimal
@@ -362,7 +305,7 @@ class DecimalHelper
 		if ( $len < 32 )
 		{
 			$k = \ceil($len/3);
-			$y = \strval((1 / static::tinyPow(4, $k)));
+			$y = \strval((1 / static::__tinyPow(4, $k)));
 		}
 		else
 		{
@@ -371,7 +314,7 @@ class DecimalHelper
 		}
 
 		$c->precision += $k;
-		$x = static::taylorSeries($c, 1, $x->times($y), new Decimal(1, $c));
+		$x = static::__taylorSeries($c, 1, $x->times($y), new Decimal(1, $c));
 
 		// Reverse argument reduction
 		for ( $i = $k; $i--; )
@@ -384,288 +327,288 @@ class DecimalHelper
 		return $x;
 	}
 
-	/**
-	 * Perform division in the specified base.
-	 *
-	 * @param Decimal|float|integer|string $x
-	 * @param Decimal|float|integer|string $y
-	 * @param integer $pr Precision
-	 * @param integer $rm Rounding mode
-	 * @param integer $dp Decimal places
-	 * @param integer $base
-	 * @since 1.0.0
-	 * @return Decimal
-	 */
-	public static function divide (
-		$x,
-	   $y,
-		$pr = null,
-		$rm = null,
-		$dp = null,
-		$base = null
-	)
-	{
-		$c = $x->_c();
-		$sign = $x->_s() === $y->_s() ? 1 : -1;
-		$xd = $x->_d();
-		$yd = $y->_d();
+	// /**
+	//  * Perform division in the specified base.
+	//  *
+	//  * @param Decimal|float|integer|string $x
+	//  * @param Decimal|float|integer|string $y
+	//  * @param integer $pr Precision
+	//  * @param integer $rm Rounding mode
+	//  * @param integer $dp Decimal places
+	//  * @param integer $base
+	//  * @since 1.0.0
+	//  * @return Decimal
+	//  */
+	// protected static function __divide (
+	// 	$x,
+	//    $y,
+	// 	$pr = null,
+	// 	$rm = null,
+	// 	$dp = null,
+	// 	$base = null
+	// )
+	// {
+	// 	$c = $x->_c();
+	// 	$sign = $x->_s() === $y->_s() ? 1 : -1;
+	// 	$xd = $x->_d();
+	// 	$yd = $y->_d();
 
-		// If either is NaN, ±Infinity or ±0...
-		if ( empty($xd) || empty($yd) || !$xd[0] || !$yd[0] )
-		{
-			// NaN or ±0
-			if ( !$x->signed() || !$y->signed() || ($xd ? $yd && $xd[0] == $yd[0] : !$yd) )
-			{ return new Decimal(\NAN, $c); }
+	// 	// If either is NaN, ±Infinity or ±0...
+	// 	if ( empty($xd) || empty($yd) || !$xd[0] || !$yd[0] )
+	// 	{
+	// 		// NaN or ±0
+	// 		if ( !$x->signed() || !$y->signed() || ($xd ? $yd && $xd[0] == $yd[0] : !$yd) )
+	// 		{ return new Decimal(\NAN, $c); }
 
-			// ±Infinity
-			if ( $xd && $xd[0] == 0 || empty($yd) )
-			{ 
-				$num = $sign > 0 ? '0' : '-0';
-				return new Decimal($num, $c); 
-			}
+	// 		// ±Infinity
+	// 		if ( $xd && $xd[0] == 0 || empty($yd) )
+	// 		{ 
+	// 			$num = $sign > 0 ? '0' : '-0';
+	// 			return new Decimal($num, $c); 
+	// 		}
 
-			return new Decimal($sign > 0 ? \INF : -\INF, $c);
-		}
+	// 		return new Decimal($sign > 0 ? \INF : -\INF, $c);
+	// 	}
 
-		if ( $base )
-		{
-			$logBase = 1;
-			$e = $x->_e() - $y->_e();
-		}
-		else
-		{
-			$base = Decimal::BASE;
-			$logBase = Decimal::LOG_BASE;
-			$e = \intval(\floor($x->_e() / $logBase) - \floor($y->_e() / $logBase));
-		}
+	// 	if ( $base )
+	// 	{
+	// 		$logBase = 1;
+	// 		$e = $x->_e() - $y->_e();
+	// 	}
+	// 	else
+	// 	{
+	// 		$base = Decimal::BASE;
+	// 		$logBase = Decimal::LOG_BASE;
+	// 		$e = \intval(\floor($x->_e() / $logBase) - \floor($y->_e() / $logBase));
+	// 	}
 
-		$yl = \count($yd);
-      $xl = \count($xd);
-      $q = new Decimal($sign, $c);
-      $qd = [];
+	// 	$yl = \count($yd);
+   //    $xl = \count($xd);
+   //    $q = new Decimal($sign, $c);
+   //    $qd = [];
 
-		// Result exponent may be one less than e.
-      // The digit array of a Decimal from 
-		// toStringBinary may have trailing zeros.
-		for ( $i = 0; isset($yd[$i]) && $yd[$i] == ($xd[$i] ?? 0); $i++ );
+	// 	// Result exponent may be one less than e.
+   //    // The digit array of a Decimal from 
+	// 	// toStringBinary may have trailing zeros.
+	// 	for ( $i = 0; isset($yd[$i]) && $yd[$i] == ($xd[$i] ?? 0); $i++ );
 
-      if (isset($yd[$i]) && $yd[$i] > ($xd[$i] ?? 0)) 
-		{ $e--; }
+   //    if (isset($yd[$i]) && $yd[$i] > ($xd[$i] ?? 0)) 
+	// 	{ $e--; }
 
-      if ( \is_null($pr) ) 
-		{
-			$sd = $pr = $c->precision;
-			$rm = $c->rounding;
-      } 
-		else if ($dp) 
-		{ $sd = $pr + ($x->_e() - $y->_e()) + 1; } 
-		else 
-		{ $sd = $pr; }
+   //    if ( \is_null($pr) ) 
+	// 	{
+	// 		$sd = $pr = $c->precision;
+	// 		$rm = $c->rounding;
+   //    } 
+	// 	else if ($dp) 
+	// 	{ $sd = $pr + ($x->_e() - $y->_e()) + 1; } 
+	// 	else 
+	// 	{ $sd = $pr; }
 
-		$more = false;
+	// 	$more = false;
 
-		if ( $sd < 0 )
-		{
-			$qd[] = 1;
-			$more = true;
-		}
-		else
-		{
-			// Convert precision in number of base 
-			// 10 digits to base 1e7 digits
-			$sd = $sd / $logBase + 2 | 0;
-			$i = 0;
+	// 	if ( $sd < 0 )
+	// 	{
+	// 		$qd[] = 1;
+	// 		$more = true;
+	// 	}
+	// 	else
+	// 	{
+	// 		// Convert precision in number of base 
+	// 		// 10 digits to base 1e7 digits
+	// 		$sd = $sd / $logBase + 2 | 0;
+	// 		$i = 0;
 
-			// divisor < 1e7
-			if ( $yl == 1 )
-			{
-				$k = 0;
-				$yd = $yd[0];
-				$sd++;
+	// 		// divisor < 1e7
+	// 		if ( $yl == 1 )
+	// 		{
+	// 			$k = 0;
+	// 			$yd = $yd[0];
+	// 			$sd++;
 
-				// k is the carry
-				for (; ( $i < $xl || $k ) && $sd--; $i++ )
-				{
-					$t = $k * $base + \intval($xd[$i] ?? 0);
-					$qd[$i] = $t / $yd | 0;
-					$k = $t % $yd | 0;
-				}
+	// 			// k is the carry
+	// 			for (; ( $i < $xl || $k ) && $sd--; $i++ )
+	// 			{
+	// 				$t = $k * $base + \intval($xd[$i] ?? 0);
+	// 				$qd[$i] = $t / $yd | 0;
+	// 				$k = $t % $yd | 0;
+	// 			}
 
-				$more = $k || $i < $xl;
-			}
-			// divisor >= 1e7
-			else
-			{
-				// Normalise xd and yd so highest 
-				// order digit of yd is >= base/2
-				$k = $base / ($yd[0] + 1) | 0;
+	// 			$more = $k || $i < $xl;
+	// 		}
+	// 		// divisor >= 1e7
+	// 		else
+	// 		{
+	// 			// Normalise xd and yd so highest 
+	// 			// order digit of yd is >= base/2
+	// 			$k = $base / ($yd[0] + 1) | 0;
 
-				if ( $k > 1 ) 
-				{
-					$yd = static::_multiplyInteger($yd, $k, $base);
-					$xd = static::_multiplyInteger($xd, $k, $base);
-					$yl = \count($yd);
-					$xl = \count($xd);
-				}
+	// 			if ( $k > 1 ) 
+	// 			{
+	// 				$yd = static::__multiplyInteger($yd, $k, $base);
+	// 				$xd = static::__multiplyInteger($xd, $k, $base);
+	// 				$yl = \count($yd);
+	// 				$xl = \count($xd);
+	// 			}
 
-				$xi = $yl;
+	// 			$xi = $yl;
 
-				$rem = static::arraySlice($xd, 0, $yl);
-				$reml = \count($rem);
+	// 			$rem = Utils::sliceArray($xd, 0, $yl);
+	// 			$reml = \count($rem);
 
-				// Add zeros to make remainder as long as divisor.
-				for (; $reml < $yl;) 
-				{ $rem[$reml++] = 0; }
+	// 			// Add zeros to make remainder as long as divisor.
+	// 			for (; $reml < $yl;) 
+	// 			{ $rem[$reml++] = 0; }
 
-				$yz = $yd;
-				\array_unshift($yz, 0);
-				$yd0 = $yd[0];
+	// 			$yz = $yd;
+	// 			\array_unshift($yz, 0);
+	// 			$yd0 = $yd[0];
 
-				if ( $yd[1] >= $base / 2 )
-				{ ++$yd0; }
+	// 			if ( $yd[1] >= $base / 2 )
+	// 			{ ++$yd0; }
 
-				do
-				{
-					$k = 0;
+	// 			do
+	// 			{
+	// 				$k = 0;
 					
-					// Compare divisor and remainder
-					$cmp = static::_compare($yd, $rem, $yl, $reml);
+	// 				// Compare divisor and remainder
+	// 				$cmp = static::__compare($yd, $rem, $yl, $reml);
 
-					// If divisor < remainder
-					if ( $cmp < 0 )
-					{
-						// Calculate trial digit, k.
-						$rem0 = $rem[0];
+	// 				// If divisor < remainder
+	// 				if ( $cmp < 0 )
+	// 				{
+	// 					// Calculate trial digit, k.
+	// 					$rem0 = $rem[0];
 
-						if ( $yl != $reml ) 
-						{ $rem0 = $rem0 * $base + ($rem[1] ?? 0); }
+	// 					if ( $yl != $reml ) 
+	// 					{ $rem0 = $rem0 * $base + ($rem[1] ?? 0); }
 
-						// k will be how many times the divisor goes into the current remainder.
-						$k = $rem0 / $yd0 | 0;
+	// 					// k will be how many times the divisor goes into the current remainder.
+	// 					$k = $rem0 / $yd0 | 0;
 
-						//  Algorithm:
-						//  1. product = divisor * trial digit (k)
-						//  2. if product > remainder: product -= divisor, k--
-						//     3. remainder -= product
-						//  4. if product was < remainder at 2:
-						//     5. compare new remainder and divisor
-						//     6. If remainder > divisor: remainder -= divisor, k++
+	// 					//  Algorithm:
+	// 					//  1. product = divisor * trial digit (k)
+	// 					//  2. if product > remainder: product -= divisor, k--
+	// 					//     3. remainder -= product
+	// 					//  4. if product was < remainder at 2:
+	// 					//     5. compare new remainder and divisor
+	// 					//     6. If remainder > divisor: remainder -= divisor, k++
 
-						if ($k > 1) 
-						{
-							if ( $k >= $base ) 
-							{ $k = $base - 1; }
+	// 					if ($k > 1) 
+	// 					{
+	// 						if ( $k >= $base ) 
+	// 						{ $k = $base - 1; }
 
-							// product = divisor * trial digit.
-							$prod = static::_multiplyInteger($yd, $k, $base);
-							$prodl = \count($prod);
-							$reml = \count($rem);
+	// 						// product = divisor * trial digit.
+	// 						$prod = static::__multiplyInteger($yd, $k, $base);
+	// 						$prodl = \count($prod);
+	// 						$reml = \count($rem);
 
-							// Compare product and remainder.
-							$cmp = static::_compare($prod, $rem, $prodl, $reml);
+	// 						// Compare product and remainder.
+	// 						$cmp = static::__compare($prod, $rem, $prodl, $reml);
 
-							// product > remainder.
-							if ($cmp == 1) 
-							{
-								$k--;
+	// 						// product > remainder.
+	// 						if ($cmp == 1) 
+	// 						{
+	// 							$k--;
 
-								// Subtract divisor from product.
-								$prod = static::_subtract($prod, $yl < $prodl ? $yz : $yd, $prodl, $base);
-							}
-						} 
-						else 
-						{
-							// cmp is -1.
-							// If k is 0, there is no need to compare yd and rem again below, so change cmp to 1
-							// to avoid it. If k is 1 there is a need to compare yd and rem again below.
-							if ( $k == 0 )
-							{ $cmp = $k = 1; }
+	// 							// Subtract divisor from product.
+	// 							$prod = static::__subtract($prod, $yl < $prodl ? $yz : $yd, $prodl, $base);
+	// 						}
+	// 					} 
+	// 					else 
+	// 					{
+	// 						// cmp is -1.
+	// 						// If k is 0, there is no need to compare yd and rem again below, so change cmp to 1
+	// 						// to avoid it. If k is 1 there is a need to compare yd and rem again below.
+	// 						if ( $k == 0 )
+	// 						{ $cmp = $k = 1; }
 
-							$prod = $yd;
-						}
+	// 						$prod = $yd;
+	// 					}
 
-						$prodl = \count($prod);
+	// 					$prodl = \count($prod);
 
-						if ($prodl < $reml)
-						{ \array_unshift($prod, 0); }
+	// 					if ($prodl < $reml)
+	// 					{ \array_unshift($prod, 0); }
 
-						// Subtract product from remainder.
-						$rem = static::_subtract($rem, $prod, $reml, $base);
+	// 					// Subtract product from remainder.
+	// 					$rem = static::__subtract($rem, $prod, $reml, $base);
 
-						// If product was < previous remainder.
-						if ( $cmp == -1 ) 
-						{
-							$reml = \count($rem);
+	// 					// If product was < previous remainder.
+	// 					if ( $cmp == -1 ) 
+	// 					{
+	// 						$reml = \count($rem);
 
-							// Compare divisor and new remainder.
-							$cmp = static::_compare($yd, $rem, $yl, $reml);
+	// 						// Compare divisor and new remainder.
+	// 						$cmp = static::__compare($yd, $rem, $yl, $reml);
 
-							// If divisor < new remainder, subtract divisor from remainder.
-							if ( $cmp < 1 ) 
-							{
-								$k++;
+	// 						// If divisor < new remainder, subtract divisor from remainder.
+	// 						if ( $cmp < 1 ) 
+	// 						{
+	// 							$k++;
 
-								// Subtract divisor from remainder.
-								$rem = static::_subtract($rem, $yl < $reml ? $yz : $yd, $reml, $base);
-							}
-						}
+	// 							// Subtract divisor from remainder.
+	// 							$rem = static::__subtract($rem, $yl < $reml ? $yz : $yd, $reml, $base);
+	// 						}
+	// 					}
 
-						$reml = \count($rem);
-					} 
-					else if ($cmp === 0) 
-					{
-						$k++;
-						$rem = [0];
-					}
+	// 					$reml = \count($rem);
+	// 				} 
+	// 				else if ($cmp === 0) 
+	// 				{
+	// 					$k++;
+	// 					$rem = [0];
+	// 				}
 					
-					// if cmp === 1, k will be 0
-					// Add the next digit, k, to the result array.
-					$qd[$i++] = $k;
+	// 				// if cmp === 1, k will be 0
+	// 				// Add the next digit, k, to the result array.
+	// 				$qd[$i++] = $k;
 
-					// Update the remainder.
-					if ($cmp && $rem[0]) 
-					{ $rem[$reml++] = $xd[$xi] ?? 0; } 
-					else 
-					{
-						$rem = isset($xd[$xi]) ? [$xd[$xi]] : [];
-						$reml = 1;
-					}
+	// 				// Update the remainder.
+	// 				if ($cmp && $rem[0]) 
+	// 				{ $rem[$reml++] = $xd[$xi] ?? 0; } 
+	// 				else 
+	// 				{
+	// 					$rem = isset($xd[$xi]) ? [$xd[$xi]] : [];
+	// 					$reml = 1;
+	// 				}
 
-				} 
-				while (($xi++ < $xl || isset($rem[0])) && $sd--);
+	// 			} 
+	// 			while (($xi++ < $xl || isset($rem[0])) && $sd--);
 
-				$more = isset($rem[0]);
-			}
+	// 			$more = isset($rem[0]);
+	// 		}
 
-			// Leading zero?
-			if ( !$qd[0] )
-			{ \array_shift($qd); }
-		}
+	// 		// Leading zero?
+	// 		if ( !$qd[0] )
+	// 		{ \array_shift($qd); }
+	// 	}
 
-		// logBase is 1 when divide is being used for base conversion.
-		if ( $logBase == 1 )
-		{
-			$q->d($qd);
-			$q->e($e);
-			static::inexact($more);
-		}
-		else
-		{
-			// To calculate q.e, first get the number of digits of qd[0].
-			for ($i = 1, $k = $qd[0]; $k >= 10; $k /= 10) 
-			{ $i++; }
+	// 	// logBase is 1 when divide is being used for base conversion.
+	// 	if ( $logBase == 1 )
+	// 	{
+	// 		$q->d($qd);
+	// 		$q->e($e);
+	// 		static::$_inexact = $more;
+	// 	}
+	// 	else
+	// 	{
+	// 		// To calculate q.e, first get the number of digits of qd[0].
+	// 		for ($i = 1, $k = $qd[0]; $k >= 10; $k /= 10) 
+	// 		{ $i++; }
 
-			$q->d($qd);
-			$q->e($i + $e * $logBase - 1);
-			$qy = static::finalise($q, $dp ? $pr + $q->_e() + 1 : $pr, $rm, $more);
+	// 		$q->d($qd);
+	// 		$q->e($i + $e * $logBase - 1);
+	// 		$qy = static::finalise($q, $dp ? $pr + $q->_e() + 1 : $pr, $rm, $more);
 
-			$q->e($qy->_e());
-			$q->d($qy->_d());
-			$q->s($qy->_s());
-		}
+	// 		$q->e($qy->_e());
+	// 		$q->d($qy->_d());
+	// 		$q->s($qy->_s());
+	// 	}
 
-		return $q;
-	}
+	// 	return $q;
+	// }
 
 	/**
 	 * Round $x to $sd significant digits 
@@ -815,13 +758,13 @@ class DecimalHelper
 				// Remove excess digits.
 				if ( $i == 0 )
 				{
-					$xd = DecimalHelper::arraySlice($xd, 0, $xdi);
+					$xd = Utils::sliceArray($xd, 0, $xdi);
 					$k = 1;
 					$xdi--;
 				}
 				else
 				{
-					$xd = DecimalHelper::arraySlice($xd, 0, $xdi+1);
+					$xd = Utils::sliceArray($xd, 0, $xdi+1);
 					$k = \pow(10, Decimal::LOG_BASE - $i);
 
 					// E.g. 56700 becomes 56000 if 7 is the rounding digit.
@@ -879,7 +822,7 @@ class DecimalHelper
 			break;
 		}
 
-		if ( static::isExternal() )
+		if ( static::$_external )
 		{
 			if ( $x->_e() > $config->maxE )
 			{
@@ -905,52 +848,52 @@ class DecimalHelper
 	 * @param int $sd
 	 * @return string
 	 */
-	public static function finiteToString (
+	protected static function __finiteToString (
 		Decimal $x,
 		$isExp = false,
 		$sd = null
 	) : string
 	{
 		if ( !$x->isFinite() )
-		{ return static::nonFiniteToString($x); }
+		{ return static::__nonFiniteToString($x); }
 
 		$e = $x->_e();
-		$str = static::digitsToString($x->_d());
+		$str = static::__digitsToString($x->_d());
 		$len = \strlen($str);
 
 		if ( $isExp )
 		{
 			if ( $sd && (($k = $sd - $len) > 0) )
-			{ $str = $str[0].'.'.static::slice($str,1).static::getZeroString($k); }
+			{ $str = $str[0].'.'.Utils::sliceStr($str,1).static::__getZeroString($k); }
 			else if ( $len > 1 )
-			{ $str = $str[0].'.'.static::slice($str,1); }
+			{ $str = $str[0].'.'.Utils::sliceStr($str,1); }
 
 			$str = $str . ($x->_e() < 0 ? 'e' : 'e+') . \strval($x->_e());
 		}
 		else if ( $e < 0 )
 		{ 
-			$str = '0.'.static::getZeroString(-$e-1).$str;
+			$str = '0.'.static::__getZeroString(-$e-1).$str;
 
 			if ( $sd && (($k = $sd - $len) > 0) )
-			{ $str .= static::getZeroString($k); }
+			{ $str .= static::__getZeroString($k); }
 		}
 		else if ( $e >= $len )
 		{
-			$str .= static::getZeroString($e+1-$len);
+			$str .= static::__getZeroString($e+1-$len);
       	if ( $sd && (($k = $sd - $e - 1) > 0)) 
-			{ $str = $str.'.'.static::getZeroString($k); }
+			{ $str = $str.'.'.static::__getZeroString($k); }
 		}
 		else
 		{
 			if ( ($k = $e + 1) < $len ) 
-			{ $str = static::slice($str, 0, $k).'.'.static::slice($str, $k); }
+			{ $str = Utils::sliceStr($str, 0, $k).'.'.Utils::sliceStr($str, $k); }
 
 			if ( $sd && (($k = $sd - $len) > 0) ) 
 			{
 				if ($e + 1 === $len) 
 				{ $str .= '.'; }
 
-				$str .= static::getZeroString($k);
+				$str .= static::__getZeroString($k);
 			}
 		}
 
@@ -965,7 +908,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return integer
 	 */
-	public static function getBase10Exponent (
+	protected static function __getBase10Exponent (
 		array $digits,
 		int $e
 	) : int
@@ -988,7 +931,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
-	public static function getLn10 (
+	protected static function __getLn10 (
 		DecimalConfig $config,
 		int $sd = 2,
 		int $pr = null
@@ -996,7 +939,7 @@ class DecimalHelper
 	{
 		if ( $sd > Decimal::LN10_PRECISION )
 		{
-			static::external(true);
+			static::$_external = true;;
 			
 			if ( $pr )
 			{ $config->precision = $pr; }
@@ -1017,7 +960,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
-	public static function getPi (
+	protected static function __getPi (
 		DecimalConfig $config,
 		int $sd = 2,
 		int $rm = DecimalCOnfig::ROUND_HALF_UP
@@ -1036,7 +979,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return int
 	 */
-	public static function getPrecision (
+	protected static function __getPrecision (
 		array $digits
 	) : int
 	{
@@ -1069,7 +1012,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return string
 	 */
-	public static function getZeroString (
+	protected static function __getZeroString (
 		int $k
 	) : string
 	{ 
@@ -1134,7 +1077,7 @@ class DecimalHelper
 	 * @param integer $power
 	 * @return Decimal
 	 */
-	public static function intPow (
+	protected static function __intPow (
 		DecimalConfig $config,
 		Decimal $base,
 		int $number,
@@ -1147,7 +1090,7 @@ class DecimalHelper
       // Maximum digits array length; leaves [28, 34] guard digits.
 		$k = \intval(\ceil(($power/Decimal::LOG_BASE)+4));
 
-		static::external(false);
+		static::$_external = false;
 
 		while ( true )
 		{
@@ -1155,7 +1098,7 @@ class DecimalHelper
 			{ 
 				$r = $r->times($base); 
 				
-				$r->d(static::truncate($r->_d(), $k));
+				$r->d(static::__truncate($r->_d(), $k));
 
 				if ( \count($r->_d()) === $k )
 				{ $isTruncated = true; }
@@ -1176,10 +1119,10 @@ class DecimalHelper
 			}
 
 			$base = $base->times($base);
-			$base->d(static::truncate($base->_d(), $k));
+			$base->d(static::__truncate($base->_d(), $k));
 		}
 
-		static::external(true);
+		static::$_external = true;
 		return $r;
 	}
 
@@ -1190,7 +1133,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return boolean
 	 */
-	public static function isOdd ( 
+	protected static function __isOdd ( 
 		$x
 	) : bool
 	{
@@ -1208,7 +1151,7 @@ class DecimalHelper
 	 * @param array<Decimal|float|int|string> $numbers
 	 * @return Decimal
 	 */
-	public static function maxOrMin (
+	protected static function __maxOrMin (
 		DecimalConfig $config,
 		string $method,
 		array $numbers
@@ -1268,7 +1211,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
-	public static function naturalExponential ( 
+	protected static function __naturalExponential ( 
 		Decimal $x, 
 		$sd = null 
 	)
@@ -1309,7 +1252,7 @@ class DecimalHelper
 
 		if ( \is_null($sd) )
 		{
-			static::external(false);
+			static::$_external = false;
 			$wpr = $pr;
 		}
 		else 
@@ -1340,11 +1283,11 @@ class DecimalHelper
 		{
 			$pow = static::finalise($pow->times($x), $wpr, 1);
 			$denominator = $denominator->times(++$i);
-			$t = $sum->plus(static::divide($pow, $denominator, $wpr, 1));
+			$t = $sum->plus(Math::div($pow, $denominator, $wpr, 1));
 
 			if ( 
-				static::slice(static::digitsToString($t->_d()), 0, $wpr) 
-				=== static::slice(static::digitsToString($sum->_d()), 0, $wpr) 
+				Utils::sliceStr(static::__digitsToString($t->_d()), 0, $wpr) 
+				=== Utils::sliceStr(static::__digitsToString($sum->_d()), 0, $wpr) 
 			)
 			{
 				$j = $k;
@@ -1360,7 +1303,7 @@ class DecimalHelper
 
 				if ( \is_null($sd) )
 				{
-					if ( $rep < 3 && static::checkRoundingDigits($sum->_d(), $wpr - $guard, $rm, $rep) )
+					if ( $rep < 3 && static::__checkRoundingDigits($sum->_d(), $wpr - $guard, $rm, $rep) )
 					{
 						$c->precision = $wpr += 10;
 						$denominator = $pow = $t = new Decimal(1,$c);
@@ -1369,7 +1312,7 @@ class DecimalHelper
 					}
 					else
 					{ 
-						static::external(true);
+						static::$_external = true;
 						return static::finalise($sum, ($c->precision = $pr), $rm, true);
 					}
 				}
@@ -1404,7 +1347,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
-	public static function naturalLogarithm ( 
+	protected static function __naturalLogarithm ( 
 		Decimal $y, 
 		$sd = null 
 	)
@@ -1442,14 +1385,14 @@ class DecimalHelper
 
 		if ( \is_null($sd) )
 		{
-			static::external(false);
+			static::$_external = false;
 			$wpr = $pr;
 		}
 		else 
 		{ $wpr = $sd; }
 
 		$c->precision = $wpr += $guard;
-		$ds = static::digitsToString($xd);
+		$ds = static::__digitsToString($xd);
 		$ds0 = (int)$ds[0];
 		
 		if ( \abs(($e = $x->_e())) < 1.5e15 )
@@ -1470,9 +1413,8 @@ class DecimalHelper
 			// max n is 6 (gives 0.7 - 1.3)
 			while ( ($ds0 < 7 && $ds0 != 1) || ( $ds0 == 1 && (int)($ds[1]??0) > 3 ) )
 			{
-				$__external = DecimalHelper::isExternal();
 				$x = $x->times($y);
-				$ds = static::digitsToString($x->_d());
+				$ds = static::__digitsToString($x->_d());
 				$ds0 = (int)$ds[0];
 				$n++;
 			}
@@ -1485,20 +1427,20 @@ class DecimalHelper
 				$e++;
 			}
 			else
-			{ $x = new Decimal($ds0.'.'.static::slice($ds,1), $c); }
+			{ $x = new Decimal($ds0.'.'.Utils::sliceStr($ds,1), $c); }
 		}
 		else 
 		{
 			// The argument reduction method above may result in overflow if the argument y is a massive
 			// number with exponent >= 1500000000000000 (9e15 / 6 = 1.5e15), so instead recall this
 			// function using ln(x*10^e) = ln(x) + e*ln(10).
-			$t = (static::getLn10($c, $wpr+2, $pr))->times($e??'NAN'.'');
-			$x = static::naturalLogarithm(new Decimal($ds0.'.'.static::slice($ds,1), $c), $wpr-$guard)->plus($t);
+			$t = (static::__getLn10($c, $wpr+2, $pr))->times($e??'NAN'.'');
+			$x = static::__naturalLogarithm(new Decimal($ds0.'.'.Utils::sliceStr($ds,1), $c), $wpr-$guard)->plus($t);
 			$c->precision = $pr;
 
 			if ( \is_null($sd) )
 			{
-				static::external(true);
+				static::$_external = true;
 				return static::finalise($x, $pr, $rm, true);
 			}
 
@@ -1511,18 +1453,18 @@ class DecimalHelper
 		// Taylor series.
 		// ln(y) = ln((1 + x)/(1 - x)) = 2(x + x^3/3 + x^5/5 + x^7/7 + ...)
 		// where x = (y - 1)/(y + 1)    (|x| < 1)
-		$sum = $numerator = $x = static::divide($x->minus(1), $x->plus(1), $wpr, 1);
+		$sum = $numerator = $x = Math::div($x->minus(1), $x->plus(1), $wpr, 1);
 		$x2 = static::finalise($x->times($x), $wpr, 1);
 		$denominator = 3;
 
 		while ( true )
 		{
 			$numerator = static::finalise($numerator->times($x2), $wpr, 1);
-			$t = $sum->plus(static::divide($numerator, new Decimal($denominator,$c), $wpr, 1));
+			$t = $sum->plus(Math::div($numerator, new Decimal($denominator,$c), $wpr, 1));
 
 			if ( 
-				static::slice(static::digitsToString($t->_d()), 0, $wpr) 
-				===  static::slice(static::digitsToString($sum->_d()), 0, $wpr) 
+				Utils::sliceStr(static::__digitsToString($t->_d()), 0, $wpr) 
+				===  Utils::sliceStr(static::__digitsToString($sum->_d()), 0, $wpr) 
 			)
 			{
 				$sum = $sum->times(2);
@@ -1532,9 +1474,9 @@ class DecimalHelper
 				// calculation, -0 + 0 = +0 and to ensure correct 
 				// rounding -0 needs to stay -0.
 				if ( $e !== 0 )
-				{ $sum = $sum->plus(static::getLn10($c, $wpr+2, $pr)->times($e.'')); }
+				{ $sum = $sum->plus(static::__getLn10($c, $wpr+2, $pr)->times($e.'')); }
 
-				$sum = static::divide($sum, new Decimal($n, $c), $wpr, 1 );
+				$sum = Math::div($sum, new Decimal($n, $c), $wpr, 1 );
 
 				// Is rm > 3 and the first 4 rounding digits 4999, 
 				// or rm < 4 (or the summation has been repeated previously) 
@@ -1546,16 +1488,16 @@ class DecimalHelper
 				// `wpr - guard` is the index of first rounding digit.
 				if ( \is_null($sd) )
 				{
-					if ( static::checkRoundingDigits($sum->_d(), $wpr - $guard, $rm, $rep??null) )
+					if ( static::__checkRoundingDigits($sum->_d(), $wpr - $guard, $rm, $rep??null) )
 					{
 						$c->precision = $wpr += $guard;
-						$t = $numerator = $x = static::divide($x1->minus(1), $x1->plus(1), $wpr, 1);
+						$t = $numerator = $x = Math::div($x1->minus(1), $x1->plus(1), $wpr, 1);
 						$x2 = static::finalise($x->times($x), $wpr, 1);
 						$denominator = $rep = 1;
 					}
 					else
 					{ 
-						static::external(true);
+						static::$_external = true;
 						return static::finalise($sum, ($c->precision = $pr), $rm, true);
 					}
 				}
@@ -1579,7 +1521,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return string
 	 */
-	public static function nonFiniteToString (
+	protected static function __nonFiniteToString (
 		$x
 	) : string
 	{ return $x->isNaN() ? 'NAN' : 'INF'; }
@@ -1593,7 +1535,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
-	public static function parseDecimal (
+	protected static function __parseDecimal (
 		Decimal $x,
 		string $str
 	) : Decimal
@@ -1616,9 +1558,9 @@ class DecimalHelper
 			{ $e = $i; }
 
 			// 1e{xxx}
-			$e += +\intval(static::slice($str, $i+1));
+			$e += +\intval(Utils::sliceStr($str, $i+1));
 			// {xxx}e1
-			$str = static::slice($str, 0, $i);
+			$str = Utils::sliceStr($str, 0, $i);
 		}
 		else if ( $e === false )
 		{ $e = \strlen($str); }
@@ -1630,7 +1572,7 @@ class DecimalHelper
 		for ( $len = \strlen($str); $len > 0 && \ord($str[$len-1]) === 48; --$len );
 
 		// Remove zeros
-		$str = static::slice($str, $i, $len);
+		$str = Utils::sliceStr($str, $i, $len);
 
 		if ( !empty($str) )
 		{
@@ -1654,12 +1596,12 @@ class DecimalHelper
 			if ( $i < $len )
 			{
 				if ( $i )
-				{ $x->dpush(+\intval(static::slice($str, 0, $i))); }
+				{ $x->dpush(+\intval(Utils::sliceStr($str, 0, $i))); }
 
 				for ( $len -= Decimal::LOG_BASE; $i < $len; )
-				{ $x->dpush(+\intval(static::slice($str, $i, $i+=Decimal::LOG_BASE))); }
+				{ $x->dpush(+\intval(Utils::sliceStr($str, $i, $i+=Decimal::LOG_BASE))); }
 
-				$str = static::slice($str, $i);
+				$str = Utils::sliceStr($str, $i);
 				$i = Decimal::LOG_BASE - \strlen($str);
 			}
 			else
@@ -1670,7 +1612,7 @@ class DecimalHelper
 
 			$x->dpush(+\intval($str));
 
-			if ( static::isExternal() )
+			if ( static::$_external )
 			{
 				if ( $x->_e() > $x->_c()->maxE )
 				{
@@ -1705,7 +1647,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
-	public static function parseOther (
+	protected static function __parseOther (
 		Decimal $x,
 		string $str
 	) : Decimal
@@ -1721,13 +1663,13 @@ class DecimalHelper
 		}
 
 		// Is hex
-		if ( \preg_match(self::IS_HEX, $str) )
+		if ( \preg_match(static::IS_HEX, $str) )
 		{ $base = 16; $str = \strtolower($str); }
 		// Is binary
-		else if ( \preg_match(self::IS_BINARY, $str) )
+		else if ( \preg_match(static::IS_BINARY, $str) )
 		{ $base = 2; }
 		// Is octal
-		else if ( \preg_match(self::IS_OCTAL, $str) )
+		else if ( \preg_match(static::IS_OCTAL, $str) )
 		{ $base = 8; }
 		else
 		{ throw new RuntimeException(\sprintf('Cannot determine decimal type to string `%s`.', $str)); }
@@ -1738,11 +1680,11 @@ class DecimalHelper
 
 		if ( $i !== false )
 		{
-			$p = +\intval(static::slice($str, $i+1));
-			$str = static::slice($str, 2, $i);
+			$p = +\intval(Utils::sliceStr($str, $i+1));
+			$str = Utils::sliceStr($str, 2, $i);
 		}
 		else
-		{ $str = static::slice($str, 2); }
+		{ $str = Utils::sliceStr($str, 2); }
 	
 		// Convert $str as an integer then divide the result 
 		// by $base raised to a power such that the
@@ -1756,10 +1698,10 @@ class DecimalHelper
 			$len = \strlen($str);
 			$i = $len - $i;
 
-			$divisor = self::intPow($x->_c(), new Decimal($base, $x->_c()), $i, $i * 2);
+			$divisor = static::__intPow($x->_c(), new Decimal($base, $x->_c()), $i, $i * 2);
 		}
 
-		$xd = self::convertBase($str, $base, static::BASE);
+		$xd = static::__convertBase($str, $base, static::BASE);
 		$xe = \count($xd) - 1;
 
 		// Remove trailing zeros
@@ -1777,10 +1719,10 @@ class DecimalHelper
 			return $x;
 		}
 
-		$x->e(self::getBase10Exponent($xd, $xe));
+		$x->e(static::__getBase10Exponent($xd, $xe));
 		$x->d($xd);
 
-		static::external(false);
+		static::$_external = false;
 
 		// At what precision to perform the division to ensure exact conversion?
 		// maxDecimalIntegerPartDigitCount = ceil(log[10](b) * otherBaseIntegerPartDigitCount)
@@ -1790,7 +1732,7 @@ class DecimalHelper
 		// Therefore using 4 * the number of digits of str will always be enough.
 		if ( $isFloat )
 		{
-			$y = self::divide($x, $divisor, $len * 4);
+			$y = Math::div($x, $divisor, $len * 4);
 
 			$x->e($y->_e());
 			$x->s($y->_s());
@@ -1806,7 +1748,7 @@ class DecimalHelper
 			$x->d($y->_d());
 		}
 		
-		static::external(true);
+		static::$_external = true;
 		return $x;
 	}
 
@@ -1819,7 +1761,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
-	public static function sine (
+	protected static function __sine (
 		DecimalConfig $c,
 		Decimal $x
 	) : Decimal
@@ -1827,7 +1769,7 @@ class DecimalHelper
 		$len = \count($x->_d());
 
 		if ( $len < 3 )
-		{ return static::taylorSeries($c, 2, $x, $x); }
+		{ return static::__taylorSeries($c, 2, $x, $x); }
 
 		// Argument reduction: sin(5x) = 16*sin^5(x) - 20*sin^3(x) + 5*sin(x)
 		// i.e. sin(x) = 16*sin^5(x/5) - 20*sin^3(x/5) + 5*sin(x/5)
@@ -1837,8 +1779,8 @@ class DecimalHelper
 		$k = 1.4 * \sqrt($len);
 		$k = $k > 16 ? 16 : $k | 0;
 
-		$x = $x->times(1/static::tinyPow(5, $k));
-		$x = static::taylorSeries($c, 2, $x, $x);
+		$x = $x->times(1/static::__tinyPow(5, $k));
+		$x = static::__taylorSeries($c, 2, $x, $x);
 
 		// Reverse argument reduction
 		$d5 = new Decimal(5, $c);
@@ -1866,7 +1808,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
-	public static function taylorSeries (
+	protected static function __taylorSeries (
 		DecimalConfig $c,
 		int $n,
 		Decimal $x,
@@ -1878,16 +1820,16 @@ class DecimalHelper
 		$pr = $c->precision;
 		$k = (int)\ceil($pr/Decimal::LOG_BASE);
 
-		static::external(false);
+		static::$_external = false;
 
 		$x2 = $x->times($x);
 		$u = new Decimal($y, $c);
 
 		for ( ;; )
 		{
-			$t = static::divide($u->times($x2), new Decimal($n++ * $n++, $c), $pr, 1);
+			$t = Math::div($u->times($x2), new Decimal($n++ * $n++, $c), $pr, 1);
 			$u = $isHyperbolic ? $y->plus($t) : $y->minus($t);
-			$y = static::divide($t->times($x2), new Decimal($n++ * $n++, $c), $pr, 1);
+			$y = Math::div($t->times($x2), new Decimal($n++ * $n++, $c), $pr, 1);
 			$t = $u->plus($y);
 
 			if ( isset($t->_d()[$k]) )
@@ -1910,8 +1852,8 @@ class DecimalHelper
 			$i++;
 		}
 
-		static::external(true);
-		$t->d(static::arraySlice($t->_d(), 0, $k+1));
+		static::$_external = true;
+		$t->d(Utils::sliceArray($t->_d(), 0, $k+1));
 
 		return $t;
 	}
@@ -1924,7 +1866,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return int
 	 */
-	public static function tinyPow (
+	protected static function __tinyPow (
 		int $b,
 		int $e
 	) : int
@@ -1949,27 +1891,27 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
-	public static function toLessThanHalfPi (
+	protected static function __toLessThanHalfPi (
 		DecimalConfig $c,
 		Decimal $x
 	)
 	{
 		$isNeg = $x->isNeg();
-		$pi = static::getPi($c, $c->precision, 1);
+		$pi = static::__getPi($c, $c->precision, 1);
 		$halfPi = $pi->times(0.5);
 
 		$x = $x->abs();
 
 		if ( $x->lte($halfPi) )
 		{
-			static::quadrant($isNeg ? 4 : 1);
+			static::$_quadrant = $isNeg ? 4 : 1;
 			return $x;
 		}
 
 		$t = $x->divToInt($pi);
 
 		if ( $t->isZero() )
-		{ static::quadrant($isNeg ? 3 : 2); }
+		{ static::$_quadrant = $isNeg ? 3 : 2; }
 		else 
 		{
 			$x = $x->minus($t->times($pi));
@@ -1977,11 +1919,11 @@ class DecimalHelper
 			// 0 <= x < pi
 			if ( $x->lte($halfPi) )
 			{ 
-				static::quadrant(static::isOdd($t) ? ($isNeg ? 2 : 3) : ($isNeg ? 4 : 1));
+				static::$_quadrant = static::__isOdd($t) ? ($isNeg ? 2 : 3) : ($isNeg ? 4 : 1);
 				return $x;
 			}
 
-			static::quadrant(static::isOdd($t) ? ($isNeg ? 1 : 4) : ($isNeg ? 3 : 2));
+			static::$_quadrant = static::__isOdd($t) ? ($isNeg ? 1 : 4) : ($isNeg ? 3 : 2);
 		}
 
 		return $x->minus($pi)->abs();
@@ -2001,7 +1943,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return string
 	 */
-	public static function toStringBinary ( 
+	protected static function __toStringBinary ( 
 		Decimal $x, 
 		int $baseOut, 
 		$sd = null, 
@@ -2013,12 +1955,12 @@ class DecimalHelper
 
 		if ( $isExp )
 		{
-			static::checkInt32($sd, 1, DecimalConfig::MAX_DIGITS);
+			Math::isInt32($sd, 1, DecimalConfig::MAX_DIGITS);
 
 			if ( \is_null($rm) )
 			{ $rm = $c->rounding; }
 			else 
-			{ static::checkInt32($rm, 0, 8); }
+			{ Math::isInt32($rm, 0, 8); }
 		}
 		else 
 		{
@@ -2027,10 +1969,10 @@ class DecimalHelper
 		}
 
 		if ( !$x->isFinite() )
-		{ $str = static::nonFiniteToString($x); }
+		{ $str = static::__nonFiniteToString($x); }
 		else
 		{
-			$str = static::finiteToString($x);
+			$str = static::__finiteToString($x);
 			$i = \strpos($str, '.');
 
 			// Use exponential notation according to `toExpPos` and `toExpNeg`? No, but if required:
@@ -2061,11 +2003,11 @@ class DecimalHelper
 				$y = new Decimal(1, $c);
 				
 				$y->e(\strlen($str)-$i);
-				$y->d(static::convertBase(static::finiteToString($y), 10, $base));
+				$y->d(static::__convertBase(static::__finiteToString($y), 10, $base));
 				$y->e(\count($y->_d()));
 			}
 
-			$xd = static::convertBase($str, 10, $base);
+			$xd = static::__convertBase($str, 10, $base);
 			$e = $len = \count($xd);
 
 			// Remove trailing zeros
@@ -2085,10 +2027,10 @@ class DecimalHelper
 					$x = new Decimal($x, $c);
 					$x->d($xd);
 					$x->e($e);
-					$x = static::divide($x, $y, $sd, $rm, 0, $base);
+					$x = Math::div($x, $y, $sd, $rm, 0, $base);
 					$xd = $x->_d();
 					$e = $x->_e();
-					$roundUp = static::_inexact();
+					$roundUp = static::$_inexact;
 				}
 
 				$i = $xd[$sd]??null;
@@ -2105,7 +2047,7 @@ class DecimalHelper
 									($rm === 6 && $xd[$sd-1] & 1) ||
 										$rm === ($x->_s() < 0 ? 8 : 7)));
 
-				$xd = static::arraySlice($xd, 0, $sd);
+				$xd = Utils::sliceArray($xd, 0, $sd);
 
 				if ( $roundUp )
 				{
@@ -2142,7 +2084,7 @@ class DecimalHelper
 							for (--$len; $len % $i; $len++) 
 							{ $str .= '0'; }
 
-							$xd = static::convertBase($str, $base, $baseOut);
+							$xd = static::__convertBase($str, $base, $baseOut);
 
 							for ($len = \count($xd); isset($xd[$len - 1]) && !$xd[$len - 1]; --$len);
 
@@ -2151,7 +2093,7 @@ class DecimalHelper
 							{ $str .= DecimalConfig::NUMERALS[$xd[$i]]; }
 						}
 						else
-						{ $str = $str[0].'.'.static::slice($str, 1); }
+						{ $str = $str[0].'.'.Utils::sliceStr($str, 1); }
 					}
 
 					$str = $str . ($e < 0 ? 'p':'p+') . $e;
@@ -2171,7 +2113,7 @@ class DecimalHelper
 						{ $str .= '0'; }
 					}
 					else if ( $e < $len )
-					{ $str = static::slice($str, 0, $e).'.'.static::slice($str, $e); }
+					{ $str = Utils::sliceStr($str, 0, $e).'.'.Utils::sliceStr($str, $e); }
 				}
 			}
 
@@ -2189,7 +2131,7 @@ class DecimalHelper
 	 * @since 1.0.0
 	 * @return array
 	 */
-	public static function truncate ( array $arr, int $length ) : array
+	protected static function __truncate ( array $arr, int $length ) : array
 	{
 		if ( count($arr) > $length )
 		{ return array_slice($arr, 0, $length); }
@@ -2197,217 +2139,114 @@ class DecimalHelper
 		return $arr;
 	}
 
-	/**
-	 * Slice string from $startIndex at $endIndex.
-	 * Similar to Javascript String.slice().
-	 *
-	 * @param string $str
-	 * @param integer $startIndex
-	 * @param integer|null $endIndex
-	 * @return string
-	 */
-	public static function slice ( 
-		string $str, 
-		int $startIndex, 
-		int $endIndex = null 
-	) : string
-	{
-		$len = \strlen($str);
-		$startIndex = $startIndex < 0 ? 0 : ($startIndex > $len ? $len : $startIndex);
-		$endIndex = \is_null($endIndex) ? null : ($endIndex < 0 ? 0 : ($endIndex > $len ? $len : $endIndex));
+	// /**
+	//  * Slice string from $startIndex at $endIndex.
+	//  * Similar to Javascript String.slice().
+	//  *
+	//  * @param string $str
+	//  * @param integer $startIndex
+	//  * @param integer|null $endIndex
+	//  * @return string
+	//  */
+	// protected static function __slice ( 
+	// 	string $str, 
+	// 	int $startIndex, 
+	// 	int $endIndex = null 
+	// ) : string
+	// {
+	// 	$len = \strlen($str);
+	// 	$startIndex = $startIndex < 0 ? 0 : ($startIndex > $len ? $len : $startIndex);
+	// 	$endIndex = \is_null($endIndex) ? null : ($endIndex < 0 ? 0 : ($endIndex > $len ? $len : $endIndex));
 
-		if ( $endIndex === $startIndex )
-		{ return ''; }
+	// 	if ( $endIndex === $startIndex )
+	// 	{ return ''; }
 
-		if ( \is_null($endIndex) )
-		{ return \substr($str, $startIndex); }
+	// 	if ( \is_null($endIndex) )
+	// 	{ return \substr($str, $startIndex); }
 
-		if ( $startIndex === 0 && $endIndex === $len )
-		{ return $str; }
+	// 	if ( $startIndex === 0 && $endIndex === $len )
+	// 	{ return $str; }
 
-		$endIndex = $endIndex - $startIndex;
-		return \substr($str, $startIndex, $endIndex);
-	}
+	// 	$endIndex = $endIndex - $startIndex;
+	// 	return \substr($str, $startIndex, $endIndex);
+	// }
 
-	/**
-	 * Slice array from $si at $ei.
-	 * Similar to Javascript Array.prototype.slice().
-	 *
-	 * @param array $arr
-	 * @param integer $startIndex
-	 * @param integer $ei
-	 * @return array
-	 */
-	public static function arraySlice ( 
-		array $arr, 
-		int $si = null, 
-		int $ei = null
-	) : array
-	{
-		$len = \count($arr);
-		$si = \is_null($si) ? 0 : ($si >= $len ? $len : ($si <= -$len ? -$len : $si));
-		$ei = \is_null($ei) || $ei >= $len ? $len : ($ei <= -$len ? -$len : $ei);
+	// /**
+	//  * Slice array from $si at $ei.
+	//  * Similar to Javascript Array.prototype.slice().
+	//  *
+	//  * @param array $arr
+	//  * @param integer $startIndex
+	//  * @param integer $ei
+	//  * @return array
+	//  */
+	// protected static function __arraySlice ( 
+	// 	array $arr, 
+	// 	int $si = null, 
+	// 	int $ei = null
+	// ) : array
+	// {
+	// 	$len = \count($arr);
+	// 	$si = \is_null($si) ? 0 : ($si >= $len ? $len : ($si <= -$len ? -$len : $si));
+	// 	$ei = \is_null($ei) || $ei >= $len ? $len : ($ei <= -$len ? -$len : $ei);
 
-		if ( $si === $len || $si === $ei )
-		{ return []; }
+	// 	if ( $si === $len || $si === $ei )
+	// 	{ return []; }
 
-		if ( $si >= 0 )
-		{
-			if ( $ei >= 0 && $ei <= $si )
-			{ return []; }
-			// $ei > $si
-			else if ( $ei > $si )
-			{
-				$_arr = [];
+	// 	if ( $si >= 0 )
+	// 	{
+	// 		if ( $ei >= 0 && $ei <= $si )
+	// 		{ return []; }
+	// 		// $ei > $si
+	// 		else if ( $ei > $si )
+	// 		{
+	// 			$_arr = [];
 
-				for ( $i = $si; $i < $ei; $i++ )
-				{ $_arr[] = $arr[$i]; }
+	// 			for ( $i = $si; $i < $ei; $i++ )
+	// 			{ $_arr[] = $arr[$i]; }
 
-				return $_arr;
-			}
-			// $ei < 0 && $ei < si
-			else
-			{
-				$ei += $len;
+	// 			return $_arr;
+	// 		}
+	// 		// $ei < 0 && $ei < si
+	// 		else
+	// 		{
+	// 			$ei += $len;
 
-				if ( $ei <= $si )
-				{ return []; }
+	// 			if ( $ei <= $si )
+	// 			{ return []; }
 
-				// $ei > $si
-				$_arr = [];
+	// 			// $ei > $si
+	// 			$_arr = [];
 
-				for ( $i = $si; $i < $ei; $i++ )
-				{ $_arr[] = $arr[$i]; }
+	// 			for ( $i = $si; $i < $ei; $i++ )
+	// 			{ $_arr[] = $arr[$i]; }
 
-				return $_arr;
-			}
-		}
+	// 			return $_arr;
+	// 		}
+	// 	}
 
-		// si < 0
-		$si += $len;
-		$ei = $ei < 0 ? $ei+$len : $ei;
+	// 	// si < 0
+	// 	$si += $len;
+	// 	$ei = $ei < 0 ? $ei+$len : $ei;
 
-		if ( $ei <= $si )
-		{ return []; }
+	// 	if ( $ei <= $si )
+	// 	{ return []; }
 
-		$_arr = [];
+	// 	$_arr = [];
 
-		for ( $i = $si; $i < $ei; $i++ )
-		{ $_arr[] = $arr[$i]; }
+	// 	for ( $i = $si; $i < $ei; $i++ )
+	// 	{ $_arr[] = $arr[$i]; }
 
-		return $_arr;
-	} 
+	// 	return $_arr;
+	// } 
 
-	public static function arrayCopy ( $arr ) : array
-	{
-		$_arr = [];
+	// protected static function __arrayCopy ( $arr ) : array
+	// {
+	// 	$_arr = [];
 
-		foreach ( $arr as $key => $value )
-		{ $_arr[$key] = $value; }
+	// 	foreach ( $arr as $key => $value )
+	// 	{ $_arr[$key] = $value; }
 
-		return $_arr;
-	}
-
-	/**
-	 * Multiplies all integers at $x array by $k adding $carry
-	 * and, after, normalize it to $base.
-	 * 
-	 * Assumes non-zero x and k, and hence non-zero result.
-	 *
-	 * @param array $x
-	 * @param integer $k
-	 * @param integer $base
-	 * @since 1.0.0
-	 * @return array
-	 */
-	private static function _multiplyInteger ( 
-		array $x, 
-		int $k, 
-		int $base 
-	) : array
-	{
-		$carry = 0;
-		$i = \count($x);
-
-		for ( $x = $x; $i--; )
-		{
-			$temp = $x[$i] * $k + $carry;
-			$x[$i] = $temp % $base | 0;
-			$carry = $temp / $base | 0;
-		}
-
-		if ( $carry )
-		{ \array_unshift($x, $carry); }
-
-		return $x;
-	}
-
-	/**
-	 * Compare two arrays $a and $b. By checking
-	 * if $a has any value greater than $b.
-	 *
-	 * @param array $a
-	 * @param array $b
-	 * @param integer $al $a length
-	 * @param integer $bl $b length
-	 * @since 1.0.0
-	 * @return integer
-	 */
-	private static function _compare ( 
-		array $a, 
-		array $b, 
-		int $al, 
-		int $bl 
-	) : int
-	{
-		if ( $al != $bl )
-		{ $r = $al > $bl ? 1 : -1; }
-		else
-		{
-			for ( $i = $r = 0; $i < $al; $i++ )
-			{
-				if ( $a[$i] != $b[$i] )
-				{
-					$r = $a[$i] > $b[$i] ? 1 : -1;
-					break;
-				}
-			}
-		}
-
-		return $r;
-	}
-
-	
-
-	/**
-	 * Subtract $b from $a.
-	 *
-	 * @param array $a
-	 * @param array $b
-	 * @param integer $al $a length
-	 * @param integer $base
-	 * @since 1.0.0
-	 * @return array
-	 */
-	private static function _subtract ( 
-		array $a, 
-		array $b, 
-		int $al, 
-		int $base 
-	) : array
-	{
-		$i = 0;
-
-		for (; $al--;)
-		{
-			$a[$al] -= $i;
-			$i = isset($a[$al], $b[$al]) && $a[$al] < $b[$al] ? 1 : 0;
-			$a[$al] = $i * $base + ($a[$al]??0) - ($b[$al]??0);
-		}
-
-		for(; !$a[0] && \count($a)-1; )
-		{ \array_shift($a); }
-
-		return $a;
-	}
+	// 	return $_arr;
+	// }
 }
