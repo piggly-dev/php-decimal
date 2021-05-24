@@ -8,10 +8,14 @@ use RuntimeException;
  * An arbitrary-precision Decimal type for PHP
  * with its own math methods and configuration.
  * 
+ * This class is inspirated at decimal.js library.
+ * 
+ * @see https://github.com/MikeMcl/decimal.js
  * @since 1.0.0
  * @package Piggly\Decimal
  * @subpackage Piggly\Decimal
  * @author Caique Araujo <caique@piggly.com.br>
+ * @copyright 2020 Michael Mclaughlin <M8ch88l@gmail.com>
  */
 class Decimal
 { 
@@ -378,7 +382,7 @@ class Decimal
 		$ys = $y->_s;
 
 		// Either NaN or ±Infinity?
-		if ( $x->isNaN() || $y->isNaN() || $x->isFinite() || !$y->isInfinite() )
+		if ( $x->isCountless() || $y->isCountless() )
 		{ 
 			if ( $x->isNaN() || $y->isNaN() )
 			{ return \NAN; }
@@ -811,6 +815,37 @@ class Decimal
 	 */
 	public static function floorOf ( $x ) : Decimal
 	{ return (new Decimal($x))->floor(); }
+
+	/**
+	 * Get Decimal digits.
+	 * 
+	 * @since 1.0.0
+	 * @return integer|float
+	 */
+	public function getDigits () : array
+	{ return $this->_d; }
+
+	/**
+	 * Get Decimal exponent value.
+	 *
+	 * It will return integer or NAN.
+	 * 
+	 * @since 1.0.0
+	 * @return integer|float
+	 */
+	public function getExponent ()
+	{ return $this->_e; }
+
+	/**
+	 * Get Decimal sign value.
+	 * 
+	 * It will return -1, 0, 1 or NAN.
+	 * 
+	 * @since 1.0.0
+	 * @return integer|float
+	 */
+	public function getSign ()
+	{ return $this->_s; }
 
 	/**
 	 * Undocumented function
@@ -1711,7 +1746,7 @@ class Decimal
 		if ( $y->isNaN() || $x->isNaN() )
 		{ $r = new Decimal(\NAN); }
 		// Both ±Infinity
-		else if ( $y->isFinite() && !$x->isInfinite() )
+		else if ( $y->isInfinite() && $x->isInfinite() )
 		{
 			$r = static::__getPi($c, $wpr, 1)->times($x->isPos() ? 0.25 : 0.75);
 			$r->_s = $y->_s;
@@ -2169,7 +2204,7 @@ class Decimal
 		$y = new Decimal($y, $c);
 
 		// If either is not finite...
-		if ( $x->isFinite() || !$y->isInfinite() || $x->isNan() || $y->isNaN() )
+		if ( $x->isCountless() || $y->isCountless() )
 		{
 			// NaN is NaN
 			if ( $x->isNan() || $y->isNaN() )
@@ -2573,7 +2608,7 @@ class Decimal
 		$y = new Decimal($y, $c);
 
 		// If either is not finite...
-		if ( $x->isFinite() || !$y->isInfinite() )
+		if ( $x->isInfinite() || $y->isInfinite() )
 		{
 			// Return NaN if either is NaN.
 			if ( $x->isNaN() || $y->isNaN() )
@@ -3247,13 +3282,7 @@ class Decimal
 		$y->_s = $y->_s*$x->_s;
 
 		// If either is NaN, ±Infinity or ±0...
-		if ( 
-				$x->isInfinite() 
-				|| $x->isNaN() 
-				|| $y->isInfinite() 
-				|| $y->isNaN()
-				|| $x->isZero()
-				|| $y->isZero() )
+		if ( $x->isNulled() || $y->isNulled() )
 		{
 			$n = \NAN;
 
@@ -3263,7 +3292,7 @@ class Decimal
 					|| ( $y->isZero() && $x->isInfinite() )
 			)
 			{ $n = \NAN; }
-			else if ( $y->isFinite() || !$x->isInfinite() )
+			else if ( $y->isInfinite() || $x->isInfinite() )
 			{
 				if ( $y->_s > 0 )
 				{ $n = \INF; }
@@ -3836,8 +3865,7 @@ class Decimal
 		$y = new Decimal($y, $c);
 		$yn = $y->toNumber();
 
-		if ( $x->isInfinite() || $x->isNaN() || $x->isZero()
-				|| $y->isInfinite() || $y->isNaN() || $y->isZero() )
+		if ( $x->isNulled() || $y->isNulled() )
 		{ return new Decimal(\pow($x->toNumber(), $yn), $c); }
 
 		$x = new Decimal($x,$c);
@@ -4210,7 +4238,7 @@ class Decimal
 				$xd = $x->_d;
 
 				// Infinity/NaN
-				if ( $x->isInfinite() || $x->isNaN() )
+				if ( $x->isCountless() )
 				{ return $x; }
 
 				// rd: the rounding digit, i.e. the digit after the digit that may be rounded up.
@@ -5006,7 +5034,7 @@ class Decimal
 		$pr = $c->precision;
 
 		// 0/NaN/Infinity?
-		if ( $x->isInfinite() || $x->isNaN() || $x->isZero() || $x->_e > 17 )
+		if ( $x->isNulled() || $x->_e > 17 )
 		{
 			$n = 0;
 
@@ -5143,13 +5171,7 @@ class Decimal
 		$pr = $c->precision;
 
 		// Is x negative or Infinity, NaN, 0 or 1?
-		if ( 
-			$x->isNegative() 
-			|| $x->isInfinite() 
-			|| $x->isNaN() 
-			|| $x->isZero() 
-			|| (($xd[0]??null) === 1 && \count($xd) === 1) 
-		)
+		if ( $x->isNegative() || $x->isNulled() || (($xd[0]??null) === 1 && \count($xd) === 1) )
 		{
 			$n = 0;
 

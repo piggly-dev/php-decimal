@@ -50,9 +50,9 @@ class ConstructorDecimalTest extends TestCase
 				'sign' => $sign,
 			],
 			[
-				'coefficient' => $d->_d(),
-				'exponent' => $d->_e(),
-				'sign' => $d->_s(),
+				'coefficient' => $d->getDigits(),
+				'exponent' => $d->getExponent(),
+				'sign' => $d->getSign(),
 			]
 		);
 	}
