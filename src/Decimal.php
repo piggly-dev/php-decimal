@@ -4226,7 +4226,7 @@ class Decimal
 		$isTruncated = false
 	) : Decimal
 	{
-		$x = static::clone($x);
+		$x = clone $x;
 		$config = $x->_c();
 		$xdi = 0;
 
@@ -5089,7 +5089,7 @@ class Decimal
 		$denominator = $pow = $sum = new Decimal(1, $c);
 		$c->precision = $wpr;
 
-		for ( ;; )
+		while ( true )
 		{
 			$pow = static::finalise($pow->times($x), $wpr, 1);
 			$denominator = $denominator->times(++$i);
@@ -5635,7 +5635,7 @@ class Decimal
 		$x2 = $x->times($x);
 		$u = new Decimal($y, $c);
 
-		for ( ;; )
+		while ( true )
 		{
 			$t = static::__divide($u->times($x2), new Decimal($n++ * $n++, $c), $pr, 1);
 			$u = $isHyperbolic ? $y->plus($t) : $y->minus($t);

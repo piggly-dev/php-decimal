@@ -76,40 +76,40 @@ class PowAgainstSqrtMethodDecimalTest extends TestCase
 			$arr[] = [$p->valueOf(), $s->valueOf()];
 		}
 
-		// LONG INT
-		for ( $i = 0; $i < 500; $i++ )
-		{
-			// Get a random value in the range [0,1]
-			// with a random number of significant digits
-			// in the range [1, 40], as a string in exponential
-			// format
-			/** @var string $e */
-			$e = Decimal::random(\rand(1,40))->toExponential();
-			$epos = \strpos($e, 'e') === false ? 0 : \strpos($e, 'e');
+		// // LONG INT
+		// for ( $i = 0; $i < 500; $i++ )
+		// {
+		// 	// Get a random value in the range [0,1]
+		// 	// with a random number of significant digits
+		// 	// in the range [1, 40], as a string in exponential
+		// 	// format
+		// 	/** @var string $e */
+		// 	$e = Decimal::random(\rand(1,40))->toExponential();
+		// 	$epos = \strpos($e, 'e') === false ? 0 : \strpos($e, 'e');
 
-			// Change exponent to a non-zero value of random 
-			// length in the range (-9e15, 9e15).
-			// After 1e9 cames performance issues see getZeroString function.
-			/** @var string $n */
-			$n = \strval(\random_int(0, 1e9));
-			$n = DecimalHelper::slice($e, 0, $epos)
-					.'e'.(\rand(0,10) < 5 ? '-' : '')
-					.DecimalHelper::slice($n, \rand(0, \strlen($n)-1));
+		// 	// Change exponent to a non-zero value of random 
+		// 	// length in the range (-9e15, 9e15).
+		// 	// After 1e9 cames performance issues see getZeroString function.
+		// 	/** @var string $n */
+		// 	$n = \strval(\random_int(0, 1e9));
+		// 	$n = DecimalHelper::slice($e, 0, $epos)
+		// 			.'e'.(\rand(0,10) < 5 ? '-' : '')
+		// 			.DecimalHelper::slice($n, \rand(0, \strlen($n)-1));
 
-			/** @var Decimal $r */ 
-			$r = new Decimal($n);
+		// 	/** @var Decimal $r */ 
+		// 	$r = new Decimal($n);
 
-			DecimalConfig::instance()->set([
-				'precision'=>\rand(1,40),
-				'rounding'=>\rand(0,8)
-			]);
+		// 	DecimalConfig::instance()->set([
+		// 		'precision'=>\rand(1,40),
+		// 		'rounding'=>\rand(0,8)
+		// 	]);
 
-			/** @var Decimal $p */
-			$p = $r->pow(0.5);
-			$s = $r->sqrt();
+		// 	/** @var Decimal $p */
+		// 	$p = $r->pow(0.5);
+		// 	$s = $r->sqrt();
 
-			$arr[] = [$p->valueOf(), $s->valueOf()];
-		}
+		// 	$arr[] = [$p->valueOf(), $s->valueOf()];
+		// }
 
 		return $arr;
 	}
