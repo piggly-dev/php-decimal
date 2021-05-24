@@ -44,7 +44,7 @@ class Math
 	 * @since 1.0.0
 	 * @return int
 	 */
-	public static function asInteger ( $num ) : int
+	public static function asInt ( $num ) : int
 	{ 
 		if ( $num instanceof Decimal )
 		{ return $num->toInt(); }
