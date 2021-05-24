@@ -103,18 +103,9 @@ class Decimal
 
 		if ( \is_numeric($n) && !\is_string($n) )
 		{
-			if ( $n === 0 )
+			if ( $n == 0 )
 			{
-				$this->_sign = 1;
-				$this->_exponent = 0;
-				$this->_digits = [0];
-
-				return;
-			}
-
-			if ( $n === -0.0 )
-			{
-				$this->_sign = -1;
+				$this->_sign = \strval($n) === '0' ? 1 : -1;
 				$this->_exponent = 0;
 				$this->_digits = [0];
 
@@ -2950,8 +2941,10 @@ class Decimal
 		}
 		else
 		{ 
-			if ( \stripos(\strval($s), 'e') === false && \stripos(\strval($s), '.') === false )
-			{ $s = \bcsqrt($x->toString(), $c->precision+4); }
+			$_x = $x->toString();
+
+			if ( \stripos($_x, 'e') === false && \stripos($_x, '.') === false )
+			{ $s = \bcsqrt($_x, $c->precision+4); }
 
 			$r = new Decimal($s, $c); 
 		}
