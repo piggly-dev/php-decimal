@@ -1,11 +1,10 @@
 <?php
 namespace Piggly\Test\Decimal;
 
-use Exception;
 use PHPUnit\Framework\TestCase;
 use Piggly\Decimal\Decimal;
 use Piggly\Decimal\DecimalConfig;
-use Piggly\Decimal\DecimalHelper;
+use Piggly\Decimal\Utils;
 
 /**
  * @coversDefaultClass \Piggly\Decimal\Decimal
@@ -92,9 +91,9 @@ class PowAgainstSqrtMethodDecimalTest extends TestCase
 			// After 1e9 cames performance issues see getZeroString function.
 			/** @var string $n */
 			$n = \strval(\random_int(0, 1e9));
-			$n = DecimalHelper::slice($e, 0, $epos)
+			$n = Utils::sliceStr($e, 0, $epos)
 					.'e'.(\rand(0,10) < 5 ? '-' : '')
-					.DecimalHelper::slice($n, \rand(0, \strlen($n)-1));
+					.Utils::sliceStr($n, \rand(0, \strlen($n)-1));
 
 			/** @var Decimal $r */ 
 			$r = new Decimal($n);
