@@ -143,15 +143,11 @@ $x->getExponent();        // 4                     exponent (base 10)
 $x->getSign();            // -1                    sign
 ```
 
-For further information see the [API](docs/api.md) reference in the docs directory.
+For further information see the [API](docs/api.md) reference in the docs directory, for now you may go to [decimal.js API](https://mikemcl.github.io/decimal.js/) since this library is fully compatible with it.
 
 ## TODO
 
 In code, there annotations `@todo` with some improvements that this library may need.
-
-## Samples
-
-You can see very lightweight samples at **/samples** folder.
 
 ## Changelog
 
@@ -165,7 +161,9 @@ This library uses the PHPUnit. We carry out tests of all the main classes of thi
 vendor/bin/phpunit
 ```
 
-> You must always run tests with PHP 7.3 and greater.
+> You must always run tests with PHP 7.3 and greater. Any changes at this library need to pass of all oldest and newests tests.
+
+> **!!** Some tests are heavy, be careful while testing them, they may require huge memory available.
 
 ## Contributions
 
@@ -176,7 +174,7 @@ See the [CONTRIBUTING](CONTRIBUTING.md) file for information before submitting y
 - [Caique Araujo](https://github.com/caiquearaujo);
 - [All contributors](../../contributors);
 
-### [decimal.js](https://github.com/MikeMcl/decimal.js/);
+### [decimal.js](https://github.com/MikeMcl/decimal.js/)
 
 - [Michael Mclaughlin at decimal.js](https://github.com/MikeMcl);
 - [Contributors at decimal.js](https://github.com/MikeMcl/decimal.js/graphs/contributors).
