@@ -85,4 +85,10 @@ php7.4 vendor/bin/phpunit
 php8.0 vendor/bin/phpunit
 ```
 
+Any changes at this library need to pass of all oldest and newests tests, since many methods are codependents. For example, by changing `minus()` method behavior... it will be reflected in many methods which may bring different values.
+
+Updating old tests values is not a choice, all values must stay the same does not matter any changes at this library. You must provide tests to any changes you did on it.
+
+> **!!** Some tests are heavy, be careful while testing them, they may require huge memory available.
+
 **Happy coding**!
