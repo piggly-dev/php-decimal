@@ -1,8 +1,6 @@
 <?php
 namespace Piggly\Decimal;
 
-use RuntimeException;
-
 /**
  * All functions required to manages
  * the expected behavior from input

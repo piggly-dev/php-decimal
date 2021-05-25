@@ -1,6 +1,6 @@
 {
     "name": "piggly/php-decimal",
-    "description": "An arbitrary-precision Decimal type for PHP.",
+    "description": "An arbitrary-precision Decimal class type for PHP.",
     "keywords": [
         "piggly",
         "decimal",
