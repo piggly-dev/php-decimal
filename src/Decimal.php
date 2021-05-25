@@ -319,10 +319,11 @@ class Decimal
 	 * is the absolute value of `x`.
 	 *
 	 * @param Decimal|float|int|string $x
+	 * @since 1.0.0
 	 * @return Decimal
 	 */
 	public static function absOf ( $x ) : Decimal
-	{ return (new Decimal($x))->abs(); }
+	{ return (new Decimal($x))->absoluteValue(); }
 
 	/**
 	 * Return a new Decimal whose value is the value 
@@ -346,6 +347,7 @@ class Decimal
 	 * to an integer using `ROUND_CEIL`.
 	 *
 	 * @param Decimal|float|int|string $x
+	 * @since 1.0.0
 	 * @return Decimal
 	 */
 	public static function ceilOf ( $x ) : Decimal
@@ -356,6 +358,7 @@ class Decimal
 	 * to an integer using `ROUND_CEIL`.
 	 *
 	 * @param Decimal|float|int|string $x
+	 * @since 1.0.0
 	 * @return Decimal
 	 */
 	public static function clone ( $x ) : Decimal
@@ -369,6 +372,7 @@ class Decimal
 	 *   NAN  if the value of either Decimal is NAN.
 	 *
 	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
 	 * @return int|float
 	 */
 	public function comparedTo ( $y )
@@ -498,6 +502,7 @@ class Decimal
 	 * mode `rounding`.
 	 *
 	 * @param Decimal|float|int|string $x
+	 * @since 1.0.0
 	 * @return Decimal
 	 */
 	public static function cosOf ( $x ) : Decimal
@@ -518,6 +523,8 @@ class Decimal
 	 *
 	 * Math.cbrt(x) = (x < 0 ? -Math.pow(-x, 1/3) : Math.pow(x, 1/3))
 	 * 
+	 * @todo 1? Compare Newton's method.
+	 * @todo 2? Replace with for-loop and checkRoundingDigits.
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
@@ -648,10 +655,11 @@ class Decimal
 	 * mode `rounding`.
 	 *
 	 * @param Decimal|float|int|string $x
+	 * @since 1.0.0
 	 * @return Decimal
 	 */
 	public static function cbrtOf ( $x ) : Decimal
-	{ return (new Decimal($x))->cbrt(); }
+	{ return (new Decimal($x))->cubeRoot(); }
 
 	/**
 	 * Return the number of decimal places 
@@ -740,10 +748,11 @@ class Decimal
 	 *
 	 * @param Decimal|float|int|string $x
 	 * @param Decimal|float|int|string $y
+	 * @since 1.0.0
 	 * @return Decimal
 	 */
 	public static function divOf ( $x, $y ) : Decimal
-	{ return (new Decimal($x))->div($y); }
+	{ return (new Decimal($x))->dividedBy($y); }
 
 	/**
 	 * Alias to dividedToIntegerBy() method.
@@ -914,7 +923,8 @@ class Decimal
 	 * 1000000   3817              1.5166076984010437725e+434294
 	 * 10000000  abandoned after 2 minute wait
 	 *
-	 * @todo (?) Compare performance of cosh(x) = 0.5 * (exp(x) + exp(-x))
+	 * @todo 1? Compare performance of cosh(x) = 0.5 * (exp(x) + exp(-x))
+	 * @todo 2? Estimation reused from cosine() and may not be optimal here.
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
@@ -996,7 +1006,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function coshOf ( $x ) : Decimal
-	{ return (new Decimal($x))->cosh(); }
+	{ return (new Decimal($x))->hyperbolicCosine(); }
 
 	/**
 	 * Return a new Decimal whose value is the hyperbolic 
@@ -1025,8 +1035,7 @@ class Decimal
 	 * 500000   13026 ms          8.7080643612718084129e+217146
 	 * 1000000  48543 ms
 	 *
-	 * TODO? Compare performance of sinh(x) = 0.5 * (exp(x) - exp(-x))
-	 *
+	 * @todo 1? Compare performance of sinh(x) = 0.5 * (exp(x) - exp(-x))
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
@@ -1106,7 +1115,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function sinhOf ( $x ) : Decimal
-	{ return (new Decimal($x))->sinh(); }
+	{ return (new Decimal($x))->hyperbolicSine(); }
 
 	/**
 	 * Return a new Decimal whose value is the hyperbolic 
@@ -1170,7 +1179,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function tanhOf ( $x ) : Decimal
-	{ return (new Decimal($x))->tanh(); }
+	{ return (new Decimal($x))->hyperbolicTangent(); }
 
 	/**
 	 * Return a new Decimal whose value is the square root
@@ -1233,6 +1242,7 @@ class Decimal
 	 * acos(|x| > 1) = NaN
 	 * acos(NaN)     = NaN
 	 *
+	 * @todo 1? Special case acos(0.5) = pi/3 and acos(-0.5) = 2*pi/3
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
@@ -1297,7 +1307,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function acosOf ( $x ) : Decimal
-	{ return (new Decimal($x))->acos(); }
+	{ return (new Decimal($x))->inverseCosine(); }
 
 	/**
 	 * Return a new Decimal whose value is the inverse of the 
@@ -1367,7 +1377,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function acoshOf ( $x ) : Decimal
-	{ return (new Decimal($x))->acosh(); }
+	{ return (new Decimal($x))->inverseHyperbolicCosine(); }
 
 	/**
 	 * Return a new Decimal whose value is the inverse of 
@@ -1430,7 +1440,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function asinhOf ( $x ) : Decimal
-	{ return (new Decimal($x))->asinh(); }
+	{ return (new Decimal($x))->inverseHyperbolicSine(); }
 
 	/**
 	 * Return a new Decimal whose value is the inverse 
@@ -1518,12 +1528,28 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function atanhOf ( $x ) : Decimal
-	{ return (new Decimal($x))->atanh(); }
+	{ return (new Decimal($x))->inverseHyperbolicTangent(); }
 
 	/**
-	 * Alias to hyperbolicTangent() method.
+	 * Return a new Decimal whose value is the arcsine (inverse sine) in radians of the value of this
+	 * Decimal.
 	 *
-	 * @see hyperbolicTangent()
+	 * Domain: [-Infinity, Infinity]
+	 * Range: [-pi/2, pi/2]
+	 *
+	 * asin(x) = 2*atan(x/(1 + sqrt(1 - x^2)))
+	 *
+	 * asin(0)       = 0
+	 * asin(-0)      = -0
+	 * asin(1/2)     = pi/6
+	 * asin(-1/2)    = -pi/6
+	 * asin(1)       = pi/2
+	 * asin(-1)      = -pi/2
+	 * asin(|x| > 1) = NaN
+	 * asin(NaN)     = NaN
+	 *
+	 * @todo 1? Special case asin(1/2) = pi/6 and asin(-1/2) = -pi/6
+	 * @todo 2? Compare performance of Taylor series.
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
@@ -1586,7 +1612,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function asinOf ( $x ) : Decimal
-	{ return (new Decimal($x))->asin(); }
+	{ return (new Decimal($x))->inverseSine(); }
 	
 	/**
 	 * Return a new Decimal whose value is the arctangent
@@ -1702,7 +1728,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function atanOf ( $x ) : Decimal
-	{ return (new Decimal($x))->atan(); }
+	{ return (new Decimal($x))->inverseTangent(); }
 
 	/**
 	 * Return a new Decimal whose value is the arctangent
@@ -1977,6 +2003,7 @@ class Decimal
 	 * log[b](Infinity) = Infinity
 	 * log[b](NaN)      = NaN
 	 *
+	 * @todo 1? May up this if to before "base if"
 	 * @param Decimal|float|int|string $base The base of the logarithm.
 	 * @since 1.0.0
 	 * @return Decimal
@@ -2119,7 +2146,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function logOf ( $x, $base = null ) : Decimal
-	{ return (new Decimal($x))->log($base); }
+	{ return (new Decimal($x))->logarithm($base); }
 
 	/**
 	 * Return a new Decimal whose value is the base 2 
@@ -2133,7 +2160,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function log2Of ( $x ) : Decimal
-	{ return (new Decimal($x))->log(2); }
+	{ return (new Decimal($x))->logarithm(2); }
 
 	/**
 	 * Return a new Decimal whose value is the base 10
@@ -2147,7 +2174,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function log10Of ( $x ) : Decimal
-	{ return (new Decimal($x))->log(10); }
+	{ return (new Decimal($x))->logarithm(10); }
 
 	/**
 	 * Return a new Decimal whose value is 
@@ -2394,7 +2421,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function subOf ( $x, $y ) : Decimal
-	{ return (new Decimal($x))->sub($y); }
+	{ return (new Decimal($x))->minus($y); }
 
 	/**
 	 * Return a new Decimal whose value is the value of this 
@@ -2479,7 +2506,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function modOf ( $x, $y ) : Decimal
-	{ return (new Decimal($x))->mod($y); }
+	{ return (new Decimal($x))->modulo($y); }
 
 	/**
 	 * Return a new Decimal whose value is the natural 
@@ -2514,7 +2541,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function expOf ( $x ) : Decimal
-	{ return (new Decimal($x))->exp(); }
+	{ return (new Decimal($x))->naturalExponential(); }
 
 	/**
 	 * Return a new Decimal whose value is the natural 
@@ -2549,7 +2576,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function lnOf ( $x ) : Decimal
-	{ return (new Decimal($x))->ln(); }
+	{ return (new Decimal($x))->naturalLogarithm(); }
 
 	/**
 	 * Return a new Decimal whose value is the value 
@@ -2752,7 +2779,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function addOf ( $x, $y ) : Decimal
-	{ return (new Decimal($x))->add($y); }
+	{ return (new Decimal($x))->plus($y); }
 
 	/**
 	 * Return the number of significant 
@@ -3024,7 +3051,9 @@ class Decimal
 	 *  sqrt(0)  =  0
 	 *  sqrt(-0) = -0
 	 * 
-	 * @todo It need performance improvements, see at SqrtMethodDecimalTest class
+	 * @todo 1? It need performance improvements
+	 * @todo 2? May never be infinity?
+	 * @todo 3? Replace with for-loop and checkRoundingDigits.
 	 * @since 1.0.0
 	 * @return Decimal
 	 */
@@ -3174,7 +3203,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function sqrtOf ( $x ) : Decimal
-	{ return (new Decimal($x))->sqrt(); }
+	{ return (new Decimal($x))->squareRoot(); }
 
 	/**
 	 * Return a new Decimal whose value is the tangent
@@ -3243,7 +3272,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function tanOf ( $x ) : Decimal
-	{ return (new Decimal($x))->tan(); }
+	{ return (new Decimal($x))->tangent(); }
 
 	/**
 	 * Return a new Decimal whose value is this Decimal 
@@ -3383,7 +3412,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function mulOf ( $x, $y ) : Decimal
-	{ return (new Decimal($x))->mul($y); }
+	{ return (new Decimal($x))->times($y); }
 
 	/**   
 	 * Return a string representing the value of this 
@@ -3814,7 +3843,7 @@ class Decimal
 	 * Decimal object to number.
 	 *
 	 * @todo Experimental
-	 * @since
+	 * @since 1.0.0
 	 * @return float|int
 	 */
 	public function toNumber ()
@@ -4016,7 +4045,7 @@ class Decimal
 	 * @return Decimal
 	 */
 	public static function powOf ( $x, $y ) : Decimal
-	{ return (new Decimal($x))->pow($y); }
+	{ return (new Decimal($x))->toPower($y); }
 
 	/**
 	 * Return a string representing the value of this Decimal 
@@ -4204,6 +4233,7 @@ class Decimal
 	 * If Decimal has digits.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0
 	 * @return boolean
 	 */
 	public function hasDigits () : bool
@@ -4217,6 +4247,7 @@ class Decimal
 	 * @param integer|float $sd
 	 * @param integer $rm
 	 * @param boolean $isTruncated
+	 * @since 1.0.0
 	 * @return Decimal
 	 */
 	public static function finalise ( 
@@ -4773,6 +4804,7 @@ class Decimal
 	 * @param Decimal $x
 	 * @param bool $isExp
 	 * @param int $sd
+	 * @since 1.0.0
 	 * @return string
 	 */
 	protected static function __finiteToString (
@@ -4890,6 +4922,7 @@ class Decimal
 	 * @param Decimal $base
 	 * @param integer $number
 	 * @param integer $power
+	 * @since 1.0.0
 	 * @return Decimal
 	 */
 	protected static function __intPow (
@@ -4959,6 +4992,7 @@ class Decimal
 	 * @param DecimalConfig $config
 	 * @param string $method
 	 * @param array<Decimal|float|int|string> $numbers
+	 * @since 1.0.0
 	 * @return Decimal
 	 */
 	protected static function __maxOrMin (

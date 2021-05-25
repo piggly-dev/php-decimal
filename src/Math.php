@@ -78,6 +78,7 @@ class Math
 	 * @param integer $i Length.
 	 * @param integer $rm Rounding mode.
 	 * @param bool $repeating
+	 * @since 1.0.0
 	 * @return bool
 	 */
 	public static function checkRoundingDigits (
@@ -347,8 +348,8 @@ class Math
 	 * 
 	 * After 5999999999, however, memory usage is too
 	 * heavy, should we fix it?
-	 * @todo Need to test performance.
-	 * @todo ? Try to be faster when $k is greater than 5999999999.
+	 * 
+	 * @todo 2? Try to be faster when $k is greater than 5999999999.
 	 * @param integer $k Quantity of zeros.
 	 * @since 1.0.0
 	 * @return string
@@ -464,6 +465,7 @@ class Math
 	 * Return if number is odd or not.
 	 *
 	 * @param float $i
+	 * @since 1.0.0
 	 * @return boolean
 	 */
 	public static function isOdd ( $i )
