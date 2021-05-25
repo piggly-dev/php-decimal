@@ -1,6 +1,8 @@
 # An arbitrary-precision Decimal class type for PHP
 
-This library is similar to [decimal.js](https://github.com/MikeMcl/decimal.js/), all business logic credits and copyrights goes to [Michael Mclaughlin](https://github.com/MikeMcl) and [contributors](https://github.com/MikeMcl/decimal.js/graphs/contributors).
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/piggly/php-decimal.svg?style=flat-square)](https://packagist.org/packages/piggly/php-decimal) [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE) 
+
+This library is similar to [decimal.js](https://github.com/MikeMcl/decimal.js/), all business logic credits and copyrights go to [Michael Mclaughlin](https://github.com/MikeMcl) and yours [contributors](https://github.com/MikeMcl/decimal.js/graphs/contributors).
 
 The `piggly/php-decimal` is fully compatible with PHP and so fast as **decimal.js** library. See below all features attached to it.
 
@@ -144,6 +146,26 @@ $x->getSign();            // -1                    sign
 ```
 
 For further information see the [API](docs/api.md) reference in the docs directory, for now you may go to [decimal.js API](https://mikemcl.github.io/decimal.js/) since this library is fully compatible with it.
+
+## Installation
+
+### Composer
+
+1. At you console, in your project folder, type `composer require piggly/php-decimal`;
+2. Don't forget to add Composer's autoload file at your code base `require_once('vendor/autoload.php);`.
+
+### Manual install
+
+1. Download or clone with repository with `git clone https://github.com/piggly-dev/php-decimal.git`;
+2. After, goes to `cd /path/to/piggly/php-decimal`;
+3. Install all Composer's dependencies with `composer install`;
+4. Add project's autoload file at your code base `require_once('/path/to/piggly/php-decimal/vendor/autoload.php);`.
+
+## Dependencies 
+
+The library has the following external dependencies:
+
+* PHP 7.3+.
 
 ## TODO
 
